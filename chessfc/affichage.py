@@ -4,16 +4,16 @@ from plateau import get_piece, get_couleur
 # Symboles d'affichage 
 GLYPHS = {
     VIDE: " ",
-    BPION: "♙",
-    BCAVA: "♘",
-    BFOU: "♗",
-    BTOUR: "♖",
+    BPION: "♟",
+    BCAVA: "♞",
+    BFOU: "♝",
+    BTOUR: "♜",
     BDAME: "♕",
-    NPION: "♟",
-    NCAVA: "♞",
-    NFOU: "♝",
-    NTOUR: "♜",
-    NDAME: "♕",
+    NPION: "♙",
+    NCAVA: "♘",
+    NFOU: "♗",
+    NTOUR: "♖",
+    NDAME: "♛",
     BALLE: "o"
 }
 
