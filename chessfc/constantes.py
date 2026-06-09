@@ -18,10 +18,16 @@ NCAVA = 8
 NFOU = 9
 NTOUR = 10
 
-PIECES = (3, 4, 5, 6, 7, 8, 9, 10)
+BDAME = 11
+NDAME = 12
+
+PIECES = (3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
 
 # Géométrie du plateau
 ALPHA = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7, "I": 8}
 NB_LIGNES = 7
 NB_COLONNES = 9
 INIT_BALLE = (3, 4)
+
+# Types
+Case = tuple[int, int]

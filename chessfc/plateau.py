@@ -68,9 +68,9 @@ def set_piece(plateau: list[list[int]], case:tuple[int, int], valeur: int) -> No
     plateau[l][c] = valeur
 
 def get_couleur(piece: int) -> int:
-    if piece in (BPION, BCAVA, BFOU, BTOUR):
+    if piece in (BPION, BCAVA, BFOU, BTOUR, BDAME):
         return BLANC
-    elif piece in (NPION, NCAVA, NFOU, NTOUR):
+    elif piece in (NPION, NCAVA, NFOU, NTOUR, NDAME):
         return NOIR
     else:
         raise ValueError(f"Pièce invalide : {piece}")

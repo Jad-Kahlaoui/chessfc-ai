@@ -8,6 +8,7 @@ from affichage import afficher
 def play() -> None:
     plateau = plateau_init()
     balle = INIT_BALLE
+    en_passant: Case | None = None
     to_move = BLANC
 
     while True:
@@ -50,13 +51,13 @@ def play() -> None:
             legal = passe_jouable(plateau, balle, case_dst)
         else:
             # déplacement de la pièce
-            legal = est_jouable(plateau, case_src, case_dst)
+            legal = est_jouable(plateau, case_src, case_dst,en_passant)
         if not legal:
             print("Coup illégal, réessaie.\n")
             continue
 
         # joue le coup
-        balle = jouer(plateau, balle, case_src, case_dst)
+        balle,en_passant = jouer(plateau, balle, case_src, case_dst,en_passant)
 
         to_move = (to_move+1)%2
 
