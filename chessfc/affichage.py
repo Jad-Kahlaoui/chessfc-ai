@@ -8,12 +8,12 @@ GLYPHS = {
     BCAVA: "♞",
     BFOU: "♝",
     BTOUR: "♜",
-    BDAME: "♕",
+    BDAME: "♛",
     NPION: "♙",
     NCAVA: "♘",
     NFOU: "♗",
     NTOUR: "♖",
-    NDAME: "♛",
+    NDAME: "♕",
     BALLE: "o"
 }
 

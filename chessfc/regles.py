@@ -110,10 +110,10 @@ def jouer(plateau: list[list[int]], balle: Case, case_src: Case, case_dst: Case,
     deplacement(plateau, case_src, case_dst)
 
     # promotion d'un pion à une dame
-    if piece == BPION and case_dst[1] == NB_COLONNES - 1:
+    if piece == BPION and case_dst[1] == NB_COLONNES - 2:
         set_piece(plateau, case_dst, BDAME)
 
-    elif piece == NPION and case_dst[1] == 2:
+    elif piece == NPION and case_dst[1] == 1:
         set_piece(plateau, case_dst, NDAME)
 
     nouveau_ep: Case | None = None

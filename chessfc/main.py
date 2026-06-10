@@ -1,68 +1,110 @@
 from constantes import *
-from plateau import plateau_init, get_piece, get_couleur, recherche_nom
-from regles import passe_jouable, est_jouable, jouer
+from plateau import plateau_init, get_piece, get_couleur, recherche_nom, get_nom
+from regles import passe_jouable, est_jouable, jouer, final
 from affichage import afficher
+from ia import joueur_alphabeta
 
 
-# Boucle de jeu
-def play() -> None:
-    plateau = plateau_init()
-    balle = INIT_BALLE
-    en_passant: Case | None = None
-    to_move = BLANC
-
+# coup d'un humain : saisie clavier "B3 D3" etc...
+def coup_humain(plateau: list[list[int]], balle: Case, joueur: int,
+                en_passant: Case | None = None) -> tuple[Case, Case] | None:
     while True:
-
-        # détermine à qui de jouer
-        if to_move == 0:
-            couleur_coup = "Blancs"
-        else :
-            couleur_coup = "Noirs"
-
-        # affichage du plateau
-        afficher(plateau, balle)
-
-        # saisie utilisateur
-        print(f"Coup aux {couleur_coup}\n")
         print("- Entrez votre coup (ex: B3 D3)")
         print("- Q pour quitter")
         saisie = input("> ")
 
         if saisie.upper() == "Q":
-            break
-        else :
-            try:
-                coup = saisie.split()
-                case_src = recherche_nom(coup[0])
-                case_dst = recherche_nom(coup[1])
-            except ValueError as err:
-                print(err)
-                continue
+            return None
 
+        try:
+            coup = saisie.split()
+            case_src = recherche_nom(coup[0])
+            case_dst = recherche_nom(coup[1])
+        except (ValueError, IndexError) as err:
+            print(err if isinstance(err, ValueError) else "Saisie invalide.")
+            continue
 
         piece = get_piece(plateau, case_src)
 
         # vérification du coup
-        if piece not in PIECES or get_couleur(piece) != to_move:
+        if piece not in PIECES or get_couleur(piece) != joueur:
             print("Pièce adverse choisie, réessaie.\n")
             continue
         if case_src == balle:
-            # frappe du balon
+            # frappe du ballon
             legal = passe_jouable(plateau, balle, case_dst)
         else:
             # déplacement de la pièce
-            legal = est_jouable(plateau, case_src, case_dst,en_passant)
+            legal = est_jouable(plateau, case_src, case_dst, en_passant)  
         if not legal:
             print("Coup illégal, réessaie.\n")
             continue
 
-        # joue le coup
-        balle,en_passant = jouer(plateau, balle, case_src, case_dst,en_passant)
+        return (case_src, case_dst)
 
-        to_move = (to_move+1)%2
+
+# Boucle de jeu, par défaut 2 humains
+# TODO Changez avec serv du prof 
+def play(strat_blanc=coup_humain, strat_noir=coup_humain) -> None:
+    plateau = plateau_init()
+    balle = INIT_BALLE
+    en_passant: Case | None = None 
+    to_move = BLANC
+
+    while True:
+        couleur_coup = "Blancs" if to_move == BLANC else "Noirs"
+
+        # affichage du plateau
+        afficher(plateau, balle)
+
+        # fin de partie
+        resultat = final(plateau, balle, to_move, en_passant)
+        if resultat is not None:
+            if resultat == 1:
+                print("But ! Les Blancs ont gagné.\n")
+            elif resultat == -1:
+                print("But ! Les Noirs ont gagné.\n")
+            else:
+                print("Pat : aucun coup possible, match nul.\n")
+            break
+
+        # détermination du coup 
+        print(f"Coup aux {couleur_coup}\n")
+        strat = strat_blanc if to_move == BLANC else strat_noir
+        coup = strat(plateau, balle, to_move, en_passant) 
+
+        if coup is None:  # interruption de partie par humain
+            print("Partie interrompue.\n")
+            break
+
+        case_src, case_dst = coup
+
+        # si c'est une IA, on montre le coup choisi
+        if strat is not coup_humain:
+            print(f"L'IA joue {get_nom(case_src)} {get_nom(case_dst)}\n")
+
+        balle, en_passant = jouer(plateau, balle, case_src, case_dst, en_passant)
+
+        to_move = (to_move + 1) % 2
 
     return None
 
 
 if __name__ == "__main__":
-    play()
+    # petit menu de sélection des joueurs 
+    ## TODO adapter avec serveur prof
+    print("Chess FC")
+    print("1) Humain vs Humain")
+    print("2) Humain (Blancs) vs IA (Noirs)")
+    print("3) IA (Blancs) vs Humain (Noirs)")
+    print("4) IA vs IA")
+    choix = input("> ").strip()
+
+    if choix == "2":
+        play(coup_humain, joueur_alphabeta(2))
+    elif choix == "3":
+        play(joueur_alphabeta(1), coup_humain)
+    elif choix == "4":
+        play(joueur_alphabeta(3), joueur_alphabeta(3))
+    else:
+        play(coup_humain, coup_humain)
