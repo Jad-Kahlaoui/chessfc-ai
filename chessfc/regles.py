@@ -122,8 +122,11 @@ def jouer(plateau: list[list[int]], balle: Case, case_src: Case, case_dst: Case,
     
     return balle, nouveau_ep
 
-def coups_legaux(plateau: list[list[int]], balle: Case, joueur: int, 
-                    en_passant: Case | None = None) -> list[tuple[Case, Case]]:
+def get_etat(plateau: list[list[int]], balle: Case, joueur: int, en_passant: Case | None = None) -> list:
+    return [plateau, balle, joueur, en_passant]
+
+def coups_legaux(etat: list) -> list[tuple[Case, Case]]:
+    plateau, balle, joueur, en_passant = etat
     coups = []
 
     for l in range(NB_LIGNES):
@@ -145,18 +148,19 @@ def coups_legaux(plateau: list[list[int]], balle: Case, joueur: int,
 
     return coups
 
-def final(plateau, balle, joueur, en_passant) -> bool:
+def final(etat: list) -> bool:
+    plateau, balle, joueur, en_passant = etat
 
     # but dans les cages blanches
     if balle[1] in (0, 1):
         return -1
-    
+
     # but dans les cages noires
     if balle[1] in (7, 8):
         return 1
-    
+
     # pat
-    if coups_legaux(plateau, balle, joueur, en_passant) == []:
+    if coups_legaux(etat) == []:
         return 0
 
     # repetition

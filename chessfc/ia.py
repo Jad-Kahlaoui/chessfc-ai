@@ -2,18 +2,17 @@ import random
 
 from constantes import *
 from plateau import get_piece, get_couleur, plateau_init
-from regles import coups_legaux, jouer, final
+from regles import coups_legaux, jouer, final, get_etat
 from affichage import afficher
 
+# --------------------------------------------------------------------------
+# Fonction d'évaluation
+# --------------------------------------------------------------------------
 
 def copier_plateau(plateau: list[list[int]]) -> list[list[int]]:
     # copie profonde pour simuler
     # un coup sans abimer le vrai plateau 
     return [ligne[:] for ligne in plateau]
-
-# --------------------------------------------------------------------------
-# Fonction d'évaluation de la partie
-# --------------------------------------------------------------------------
 
 # valeur num de chaque pièce
 VALEURS = {
@@ -25,13 +24,13 @@ VALEURS = {
 }
 
 ## fonction de calcul de score pour chaque état de la partie
-def evaluer(plateau: list[list[int]], balle: Case, joueur: int,
-            en_passant: Case | None = None) -> float:
+def evaluer(etat: list) -> float:
+    plateau, balle, joueur, en_passant = etat
     # Les Blancs maximisent (ils poussent la balle vers la colonne 8), les Noirs
     # minimisent (ils poussent vers la colonne 0)
 
     # fin de jeu
-    fin = final(plateau, balle, joueur, en_passant)
+    fin = final(etat)
     if fin == 1:
         return 1000.0   # les Blancs ont marqué
     if fin == -1:
@@ -66,21 +65,20 @@ def evaluer(plateau: list[list[int]], balle: Case, joueur: int,
 # Stratégie 1 : minmax 
 # --------------------------------------------------------------------------
 
-def alphabeta(plateau: list[list[int]], balle: Case, joueur: int,
-              prof: int, alpha: float, beta: float,
-              en_passant: Case | None = None) -> float:
+def alphabeta(etat: list, prof: int, alpha: float, beta: float) -> float:
     # joueur = couleur au trait ; BLANC maximise, NOIR minimise.
+    plateau, balle, joueur, en_passant = etat
 
-    fin = final(plateau, balle, joueur, en_passant)
+    fin = final(etat)
     if fin is not None:
         return float(fin * 1000)
 
     if prof == 0:
-        return evaluer(plateau, balle, joueur, en_passant)
+        return evaluer(etat)
 
-    coups = coups_legaux(plateau, balle, joueur, en_passant)
+    coups = coups_legaux(etat)
     if not coups:
-        return evaluer(plateau, balle, joueur, en_passant)
+        return evaluer(etat)
 
     adversaire = (joueur + 1) % 2
 
@@ -89,8 +87,8 @@ def alphabeta(plateau: list[list[int]], balle: Case, joueur: int,
         for case_src, case_dst in coups:
             copie = copier_plateau(plateau)
             new_balle, new_ep = jouer(copie, balle, case_src, case_dst, en_passant)
-            valeur = max(valeur, alphabeta(copie, new_balle, adversaire,
-                                           prof - 1, alpha, beta, new_ep))
+            new_etat = get_etat(copie, new_balle, adversaire, new_ep)
+            valeur = max(valeur, alphabeta(new_etat, prof - 1, alpha, beta))
             alpha = max(alpha, valeur)
             if alpha >= beta:
                 break  # coupure beta
@@ -100,19 +98,19 @@ def alphabeta(plateau: list[list[int]], balle: Case, joueur: int,
         for case_src, case_dst in coups:
             copie = copier_plateau(plateau)
             new_balle, new_ep = jouer(copie, balle, case_src, case_dst, en_passant)
-            valeur = min(valeur, alphabeta(copie, new_balle, adversaire,
-                                           prof - 1, alpha, beta, new_ep))
+            new_etat = get_etat(copie, new_balle, adversaire, new_ep)
+            valeur = min(valeur, alphabeta(new_etat, prof - 1, alpha, beta))
             beta = min(beta, valeur)
             if alpha >= beta:
                 break  # coupure alpha
         return valeur
 
 
-def meilleur_coup(plateau: list[list[int]], balle: Case, joueur: int,
-                  prof: int, en_passant: Case | None = None) -> tuple[Case, Case] | None:
+def meilleur_coup(etat: list, prof: int) -> tuple[Case, Case] | None:
     # choisit le coup qui maximise (Blancs) ou minimise (Noirs) la
     # valeur alpha-beta. En cas d'egalité, choix aléatoire
-    coups = coups_legaux(plateau, balle, joueur, en_passant)
+    plateau, balle, joueur, en_passant = etat
+    coups = coups_legaux(etat)
     if not coups:
         return None
 
@@ -123,8 +121,8 @@ def meilleur_coup(plateau: list[list[int]], balle: Case, joueur: int,
     for case_src, case_dst in coups:
         copie = copier_plateau(plateau)
         new_balle, new_ep = jouer(copie, balle, case_src, case_dst, en_passant)
-        valeur = alphabeta(copie, new_balle, adversaire,
-                           prof - 1, float("-inf"), float("inf"), new_ep)
+        new_etat = get_etat(copie, new_balle, adversaire, new_ep)
+        valeur = alphabeta(new_etat, prof - 1, float("-inf"), float("inf"))
 
         if joueur == BLANC:
             if valeur > meilleure_valeur:
@@ -143,9 +141,8 @@ def meilleur_coup(plateau: list[list[int]], balle: Case, joueur: int,
 
 
 def joueur_alphabeta(prof: int = 2):
-    def strat(plateau: list[list[int]], balle: Case, joueur: int,
-              en_passant: Case | None = None) -> tuple[Case, Case] | None:
-        return meilleur_coup(plateau, balle, joueur, prof, en_passant)
+    def strat(etat: list) -> tuple[Case, Case] | None:
+        return meilleur_coup(etat, prof)
     return strat
 
 
@@ -156,14 +153,13 @@ def joueur_alphabeta(prof: int = 2):
 def jouer_partie(strat_blanc, strat_noir, debug: bool = False,
                  max_coups: int = 200) -> int | None:
 
-    plateau = plateau_init()
-    balle = INIT_BALLE
-    en_passant: Case | None = None
-    trait = BLANC
+    etat = get_etat(plateau_init(), INIT_BALLE, BLANC)
 
     for _ in range(max_coups):
-        # fin de partie 
-        resultat = final(plateau, balle, trait, en_passant)
+        plateau, balle, trait, en_passant = etat
+
+        # fin de partie
+        resultat = final(etat)
         if resultat is not None:
             if debug:
                 afficher(plateau, balle)
@@ -171,9 +167,9 @@ def jouer_partie(strat_blanc, strat_noir, debug: bool = False,
             return resultat
 
         strat = strat_blanc if trait == BLANC else strat_noir
-        coup = strat(plateau, balle, trait, en_passant)
+        coup = strat(etat)
         if coup is None:
-            return 0  # aucun coup 
+            return 0  # aucun coup
 
         case_src, case_dst = coup
         balle, en_passant = jouer(plateau, balle, case_src, case_dst, en_passant)
@@ -181,9 +177,9 @@ def jouer_partie(strat_blanc, strat_noir, debug: bool = False,
         if debug:
             afficher(plateau, balle)
 
-        trait = (trait + 1) % 2
+        etat = get_etat(plateau, balle, (trait + 1) % 2, en_passant)
 
-    return None 
+    return None
 
 # --------------------------------------------------------------------------
 # Stratégie 2 : TODO A faire  

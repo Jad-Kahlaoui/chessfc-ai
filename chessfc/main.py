@@ -1,13 +1,13 @@
 from constantes import *
 from plateau import plateau_init, get_piece, get_couleur, recherche_nom, get_nom
-from regles import passe_jouable, est_jouable, jouer, final
+from regles import passe_jouable, est_jouable, jouer, final, get_etat
 from affichage import afficher
 from ia import joueur_alphabeta
 
 
 # coup d'un humain : saisie clavier "B3 D3" etc...
-def coup_humain(plateau: list[list[int]], balle: Case, joueur: int,
-                en_passant: Case | None = None) -> tuple[Case, Case] | None:
+def coup_humain(etat: list) -> tuple[Case, Case] | None:
+    plateau, balle, joueur, en_passant = etat
     while True:
         print("- Entrez votre coup (ex: B3 D3)")
         print("- Q pour quitter")
@@ -46,19 +46,17 @@ def coup_humain(plateau: list[list[int]], balle: Case, joueur: int,
 # Boucle de jeu, par défaut 2 humains
 # TODO Changez avec serv du prof 
 def play(strat_blanc=coup_humain, strat_noir=coup_humain) -> None:
-    plateau = plateau_init()
-    balle = INIT_BALLE
-    en_passant: Case | None = None 
-    to_move = BLANC
+    etat = get_etat(plateau_init(), INIT_BALLE, BLANC)
 
     while True:
+        plateau, balle, to_move, en_passant = etat
         couleur_coup = "Blancs" if to_move == BLANC else "Noirs"
 
         # affichage du plateau
         afficher(plateau, balle)
 
         # fin de partie
-        resultat = final(plateau, balle, to_move, en_passant)
+        resultat = final(etat)
         if resultat is not None:
             if resultat == 1:
                 print("But ! Les Blancs ont gagné.\n")
@@ -71,7 +69,7 @@ def play(strat_blanc=coup_humain, strat_noir=coup_humain) -> None:
         # détermination du coup 
         print(f"Coup aux {couleur_coup}\n")
         strat = strat_blanc if to_move == BLANC else strat_noir
-        coup = strat(plateau, balle, to_move, en_passant) 
+        coup = strat(etat)
 
         if coup is None:  # interruption de partie par humain
             print("Partie interrompue.\n")
@@ -84,8 +82,7 @@ def play(strat_blanc=coup_humain, strat_noir=coup_humain) -> None:
             print(f"L'IA joue {get_nom(case_src)} {get_nom(case_dst)}\n")
 
         balle, en_passant = jouer(plateau, balle, case_src, case_dst, en_passant)
-
-        to_move = (to_move + 1) % 2
+        etat = get_etat(plateau, balle, (to_move + 1) % 2, en_passant)
 
     return None
 
