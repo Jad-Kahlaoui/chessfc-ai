@@ -2,3 +2,7 @@ chessfc/__pycache__/affichage.cpython-312.pyc
 chessfc/__pycache__/constantes.cpython-312.pyc
 chessfc/__pycache__/plateau.cpython-312.pyc
 chessfc/__pycache__/regles.cpython-312.pyc
+.DS_Store
+.gitignore
+chessfc/__pycache__/ia.cpython-312.pyc
+__pycache__/affichage.cpython-312.pyc
