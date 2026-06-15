@@ -199,8 +199,8 @@ def meilleur_coup(etat: list, prof: int, historique: dict[int, int] | None = Non
 
 def joueur_alphabeta(prof: int = 2):
     table_transpo: dict = {}  # conservée d'un coup à l'autre pour ce joueur
-    def strat(etat: list) -> tuple[Case, Case] | None:
-        return meilleur_coup(etat, prof, table_transpo=table_transpo)
+    def strat(etat: list, historique: dict[int, int] | None = None) -> tuple[Case, Case] | None:
+        return meilleur_coup(etat, prof, historique, table_transpo)
     return strat
 
 
@@ -229,7 +229,7 @@ def jouer_partie(strat_blanc, strat_noir, debug: bool = False,
             return resultat
 
         strat = strat_blanc if trait == BLANC else strat_noir
-        coup = strat(etat)
+        coup = strat(etat, repetition_transpo)
         if coup is None:
             return 0  # aucun coup
 

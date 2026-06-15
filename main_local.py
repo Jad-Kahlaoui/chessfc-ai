@@ -7,7 +7,7 @@ from zobrist import zobrist_hash
 
 
 # coup d'un humain : saisie clavier "B3 D3" etc...
-def coup_humain(etat: list) -> tuple[Case, Case] | None:
+def coup_humain(etat: list, historique: dict[int, int] | None = None) -> tuple[Case, Case] | None:
     plateau, balle, joueur, en_passant = etat
     while True:
         print("- Entrez votre coup (ex: B3 D3)")
@@ -74,7 +74,7 @@ def play(strat_blanc=coup_humain, strat_noir=coup_humain) -> None:
         # détermination du coup 
         print(f"Coup aux {couleur_coup}\n")
         strat = strat_blanc if to_move == BLANC else strat_noir
-        coup = strat(etat)
+        coup = strat(etat, repetition_transpo)
 
         if coup is None:  # interruption de partie par humain
             print("Partie interrompue.\n")
@@ -103,9 +103,9 @@ if __name__ == "__main__":
     choix = input("> ").strip()
 
     if choix == "2":
-        play(coup_humain, joueur_alphabeta(3))
+        play(coup_humain, joueur_alphabeta(5))
     elif choix == "3":
-        play(joueur_alphabeta(3), coup_humain)
+        play(joueur_alphabeta(4), coup_humain)
     elif choix == "4":
         play(joueur_alphabeta(4), joueur_alphabeta(4))
     else:
