@@ -46,14 +46,64 @@ def evaluer(etat: list) -> float:
     # progression de la balle : plus la colonne est grande, mieux c'est pour
     # les Blancs (but noir colonne 8), et inversement 
     # Colonne centrale = 4 -> neutre
-    score += (balle[1] - 4) * 0.5 # TODO Optimisation de la val 
+
+    score += (balle[1] - 4) * 0.8 
 
     # controle de la balle : bonus pour celui dont une piece occupe la balle
     porteur = get_piece(plateau, balle)
     if porteur in PIECES:
-        score += 0.3 if get_couleur(porteur) == BLANC else -0.3 #TODO Optimiser le bonus 
+     score += 0.5 if get_couleur(porteur) == BLANC else -0.5 
+
+    # bonus/malus si la balle est proche du but
+    if balle[1] >= 6:
+        score += 3.0
+    elif balle[1] <= 2:
+        score -= 3.0
+    return score
+
+
+def score_coup_rapide(etat: list, coup: tuple[Case, Case]) -> float:
+    plateau, balle, joueur, en_passant = etat
+    case_src, case_dst = coup
+    piece_src = get_piece(plateau, case_src)
+    piece_dst = get_piece(plateau, case_dst)
+
+    score = 0.0
+
+    # Tir/passe avec la balle : priorité forte
+    if case_src == balle:
+        if joueur == BLANC:
+            score += case_dst[1] * 10
+        else:
+            score += (NB_COLONNES - 1 - case_dst[1]) * 10
+
+        # but immédiat
+        if joueur == BLANC and case_dst[1] >= 7:
+            score += 1000
+        elif joueur == NOIR and case_dst[1] <= 1:
+            score += 1000
+
+    # Capture
+    if piece_dst in PIECES and get_couleur(piece_dst) != joueur:
+        score += VALEURS.get(piece_dst, 0) * 5
+
+    # Promotion
+    if piece_src == BPION and case_dst[1] == NB_COLONNES - 2:
+        score += 50
+    elif piece_src == NPION and case_dst[1] == 1:
+        score += 50
+
+    # Avancer vers le but adverse
+    if joueur == BLANC:
+        score += case_dst[1] - case_src[1]
+    else:
+        score += case_src[1] - case_dst[1]
 
     return score
+
+
+def trier_coups(etat: list, coups: list[tuple[Case, Case]]) -> list[tuple[Case, Case]]:
+    return sorted(coups, key=lambda coup: score_coup_rapide(etat, coup), reverse=True)
 
 # --------------------------------------------------------------------------
 # Stratégie 1 : minmax 
@@ -88,7 +138,7 @@ def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: d
         if alpha >= beta:
             return valeur
 
-    coups = coups_legaux(etat)
+    coups = trier_coups(etat, coups_legaux(etat))
 
     # évaluation en fin d'exploration (but, pat ou répétition)
     fin = final(etat, repetition_transpo, coups)
@@ -154,7 +204,7 @@ def meilleur_coup(etat: list, prof: int, historique: dict[int, int] | None = Non
     # choisit le coup qui maximise (Blancs) ou minimise (Noirs) la
     # valeur alpha-beta. En cas d'egalité, choix aléatoire
     plateau, balle, joueur, en_passant = etat
-    coups = coups_legaux(etat)
+    coups = trier_coups(etat, coups_legaux(etat))
     if not coups:
         return None
 
