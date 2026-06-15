@@ -11,15 +11,14 @@ from constantes import *
 from plateau import colonnes_jouables, get_nom
 from regles import jouer, get_etat
 from ia import meilleur_coup, copier_plateau
+from zobrist import zobrist_hash
 from adaptateur import etat_vers_plateau, role_vers_couleur, coup_vers_action
 
 ## profondeur de recherche de l'alpha-beta - TODO à modifier
 PROFONDEUR = 3
 
 
-def detecter_en_passant(precedent: list[list[int]] | None,
-                        courant: list[list[int]],
-                        couleur_adverse: int) -> Case | None:
+def detecter_en_passant(precedent: Plateau | None, courant: Plateau, couleur_adverse: int) -> Case | None:
     """Retrouve la cible de prise en passant en comparant le plateau prévu
     apres notre dernier coup avec le plateau recu du serveur car il 
     faut detecter soi-meme un double pas de pion adverse entre nos deux
@@ -58,8 +57,9 @@ def start_fn(game_id: str, role: PlayerRole, start_clock: Duration,
     print(f"  temps par tour : {play_clock} ns (0 = illimite)")
     print(f"  temps total    : {total_clock} ns (0 = illimite)")
     print(f"  limite de tours: {limit_number_of_turn} (0 = aucune)")
-    ## return le plateau du coup d'avant (aucun car début de partie)
-    return {"precedent": None}
+    
+    ## table : table de transposition conservée d'un coup à l'autre
+    return {"precedent": None, "historique": {}, "table": {}}
 
 
 def strategy_fn(game_id: str, environment: Environment, state: State,
@@ -71,7 +71,17 @@ def strategy_fn(game_id: str, environment: Environment, state: State,
     en_passant = detecter_en_passant(environment.get("precedent"), plateau, adverse)
 
     etat = get_etat(plateau, balle, couleur, en_passant)
-    coup = meilleur_coup(etat, PROFONDEUR)
+
+    ## on compte la position courante dans l'historique réel pour anticiper les répétitions
+    historique = dict(environment.get("historique") or {})
+    historique[zobrist_hash(etat)] = historique.get(zobrist_hash(etat), 0) + 1
+
+    ## table réutilisée
+    table_transpo = environment.get("table")
+    if table_transpo is None:
+        table_transpo = {}
+
+    coup = meilleur_coup(etat, PROFONDEUR, historique, table_transpo)
 
     if coup is None:
         ## aucun coup legal: serveur doit normalement conclure la partie
@@ -86,6 +96,8 @@ def strategy_fn(game_id: str, environment: Environment, state: State,
     jouer(prevision, balle, case_src, case_dst, en_passant)
     environment = dict(environment)
     environment["precedent"] = prevision
+    environment["historique"] = historique
+    environment["table"] = table_transpo
 
     return coup_vers_action(case_src, case_dst), environment
 

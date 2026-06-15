@@ -19,7 +19,7 @@ CORRESPONDANCES = {
 }
 
 
-def etat_vers_plateau(state: State) -> tuple[list[list[int]], Case]:
+def etat_vers_plateau(state: State) -> tuple[Plateau, Case]:
     """
         - Convertit un State en (plateau, balle)
         - Les coins hors-croix du State sont ignorés (MUR dans notre code)

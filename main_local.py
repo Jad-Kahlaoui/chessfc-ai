@@ -3,6 +3,7 @@ from plateau import plateau_init, get_piece, get_couleur, recherche_nom, get_nom
 from regles import passe_jouable, est_jouable, jouer, final, get_etat
 from affichage import afficher
 from ia import joueur_alphabeta
+from zobrist import zobrist_hash
 
 
 # coup d'un humain : saisie clavier "B3 D3" etc...
@@ -47,6 +48,7 @@ def coup_humain(etat: list) -> tuple[Case, Case] | None:
 # TODO Changez avec serv du prof 
 def play(strat_blanc=coup_humain, strat_noir=coup_humain) -> None:
     etat = get_etat(plateau_init(), INIT_BALLE, BLANC)
+    repetition_transpo: dict[int, int] = {}  # comptage des positions (répétition)
 
     while True:
         plateau, balle, to_move, en_passant = etat
@@ -55,15 +57,18 @@ def play(strat_blanc=coup_humain, strat_noir=coup_humain) -> None:
         # affichage du plateau
         afficher(plateau, balle)
 
-        # fin de partie
-        resultat = final(etat)
+        # comptage de la position courante puis test de fin de partie
+        h = zobrist_hash(etat)
+        repetition_transpo[h] = repetition_transpo.get(h, 0) + 1
+
+        resultat = final(etat, repetition_transpo)
         if resultat is not None:
             if resultat == 1:
                 print("But ! Les Blancs ont gagné.\n")
             elif resultat == -1:
                 print("But ! Les Noirs ont gagné.\n")
             else:
-                print("Pat : aucun coup possible, match nul.\n")
+                print("Match nul (pat ou triple répétition).\n")
             break
 
         # détermination du coup 
@@ -98,10 +103,10 @@ if __name__ == "__main__":
     choix = input("> ").strip()
 
     if choix == "2":
-        play(coup_humain, joueur_alphabeta(2))
+        play(coup_humain, joueur_alphabeta(3))
     elif choix == "3":
-        play(joueur_alphabeta(1), coup_humain)
+        play(joueur_alphabeta(3), coup_humain)
     elif choix == "4":
-        play(joueur_alphabeta(3), joueur_alphabeta(3))
+        play(joueur_alphabeta(4), joueur_alphabeta(4))
     else:
         play(coup_humain, coup_humain)

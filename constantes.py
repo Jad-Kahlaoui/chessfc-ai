@@ -31,3 +31,4 @@ INIT_BALLE = (3, 4)
 
 # Types
 Case = tuple[int, int]
+Plateau = list[list[int]]

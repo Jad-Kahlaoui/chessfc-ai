@@ -17,7 +17,7 @@ GLYPHS = {
     BALLE: "o"
 }
 
-def glyphe_case(plateau: list[list[int]], balle: tuple[int, int], l: int, c: int) -> str:
+def glyphe_case(plateau: Plateau, balle: tuple[int, int], l: int, c: int) -> str:
     piece = get_piece(plateau, (l, c))
 
     # case sans pièce
@@ -33,7 +33,7 @@ def glyphe_case(plateau: list[list[int]], balle: tuple[int, int], l: int, c: int
         return glyphe + marque
     return marque + glyphe
 
-def afficher(plateau:list[list[int]], balle: tuple[int, int]) -> None:
+def afficher(plateau:Plateau, balle: tuple[int, int]) -> None:
     marge = "  "  # colonne des numéros de ligne (1 chiffre + 1 espace)
     bordure_courte = marge + "    "*2 + "+---"*5+"+" + "\n"
     bordure_longue = marge + "+---"*9+"+" + "\n"

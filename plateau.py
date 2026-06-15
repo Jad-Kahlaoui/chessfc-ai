@@ -34,7 +34,7 @@ def recherche_nom(nom_case: str) -> tuple[int, int]:
 
     return (l, c)
 
-def plateau_vide() -> list[list[int]]:
+def plateau_vide() -> Plateau:
     plateau = [[MUR] * NB_COLONNES for _ in range(NB_LIGNES)]
     for l in range(NB_LIGNES):
         deb, fin = colonnes_jouables(l)
@@ -42,7 +42,7 @@ def plateau_vide() -> list[list[int]]:
             plateau[l][c] = VIDE
     return plateau
 
-def plateau_init() -> list[list[int]]:
+def plateau_init() -> Plateau:
     plateau = plateau_vide()
     plateau[2][0] = BTOUR
     plateau[3][0] = BFOU
@@ -59,11 +59,11 @@ def plateau_init() -> list[list[int]]:
     set_piece(plateau, INIT_BALLE, BALLE)
     return plateau
 
-def get_piece(plateau: list[list[int]], case:tuple[int, int]) -> int:
+def get_piece(plateau: Plateau, case:tuple[int, int]) -> int:
     l, c = case
     return plateau[l][c]
 
-def set_piece(plateau: list[list[int]], case:tuple[int, int], valeur: int) -> None:
+def set_piece(plateau: Plateau, case:tuple[int, int], valeur: int) -> None:
     l, c = case
     plateau[l][c] = valeur
 

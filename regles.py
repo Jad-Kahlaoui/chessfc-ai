@@ -1,8 +1,9 @@
 from constantes import *
 from plateau import get_piece, set_piece, get_couleur, est_atteignable, colonnes_jouables
+from zobrist import zobrist_hash
 
 
-def cases_visees(plateau: list[list[int]], case_src: Case) -> list[Case]:
+def cases_visees(plateau: Plateau, case_src: Case) -> list[Case]:
     piece = get_piece(plateau, case_src)
     couleur = get_couleur(piece)
     l, c = case_src
@@ -55,7 +56,7 @@ def cases_visees(plateau: list[list[int]], case_src: Case) -> list[Case]:
 
     return cases
 
-def est_jouable(plateau: list[list[int]], case_src: Case, case_dst: Case, en_passant: Case | None = None) -> bool:
+def est_jouable(plateau: Plateau, case_src: Case, case_dst: Case, en_passant: Case | None = None) -> bool:
     piece = get_piece(plateau, case_src)
 
     # verification de la pièce
@@ -77,7 +78,7 @@ def est_jouable(plateau: list[list[int]], case_src: Case, case_dst: Case, en_pas
 
     return True
 
-def passe_jouable(plateau: list[list[int]], balle: Case, case_dst: Case) -> bool:
+def passe_jouable(plateau: Plateau, balle: Case, case_dst: Case) -> bool:
     piece = get_piece(plateau, balle)  # la pièce qui possède le ballon
     cible = get_piece(plateau,case_dst)
     if piece in (BPION,NPION):
@@ -85,14 +86,14 @@ def passe_jouable(plateau: list[list[int]], balle: Case, case_dst: Case) -> bool
             return cible in PIECES
     return piece in PIECES and case_dst in cases_visees(plateau, balle) 
 
-def deplacement(plateau: list[list[int]], case_src: Case, case_dst: Case) -> None:
+def deplacement(plateau: Plateau, case_src: Case, case_dst: Case) -> None:
     piece_src = get_piece(plateau, case_src)
     set_piece(plateau, case_dst, piece_src)
     set_piece(plateau, case_src, VIDE)
 
     return None
 
-def jouer(plateau: list[list[int]], balle: Case, case_src: Case, case_dst: Case,
+def jouer(plateau: Plateau, balle: Case, case_src: Case, case_dst: Case,
             en_passant: Case | None = None) -> tuple[Case, Case | None]:
 
     # frappe du ballon
@@ -122,7 +123,7 @@ def jouer(plateau: list[list[int]], balle: Case, case_src: Case, case_dst: Case,
     
     return balle, nouveau_ep
 
-def get_etat(plateau: list[list[int]], balle: Case, joueur: int, en_passant: Case | None = None) -> list:
+def get_etat(plateau: Plateau, balle: Case, joueur: int, en_passant: Case | None = None) -> list:
     return [plateau, balle, joueur, en_passant]
 
 def coups_legaux(etat: list) -> list[tuple[Case, Case]]:
@@ -130,7 +131,8 @@ def coups_legaux(etat: list) -> list[tuple[Case, Case]]:
     coups = []
 
     for l in range(NB_LIGNES):
-        for c in range(*colonnes_jouables(l)):
+        deb_col, fin_col = colonnes_jouables(l)
+        for c in range(deb_col, fin_col):
             case_src = (l, c)
             piece = get_piece(plateau, case_src)
             if piece not in PIECES or get_couleur(piece) != joueur:
@@ -148,7 +150,7 @@ def coups_legaux(etat: list) -> list[tuple[Case, Case]]:
 
     return coups
 
-def final(etat: list) -> bool:
+def final(etat: list, repetition_transpo: dict[int, int], coups: list | None = None) -> bool:
     plateau, balle, joueur, en_passant = etat
 
     # but dans les cages blanches
@@ -159,11 +161,15 @@ def final(etat: list) -> bool:
     if balle[1] in (7, 8):
         return 1
 
-    # pat
-    if coups_legaux(etat) == []:
+    # pat : l'appelant peut fournir coups_legaux déjà calculé pour éviter un recalcul
+    if coups is None:
+        coups = coups_legaux(etat)
+    if coups == []:
         return 0
 
-    # repetition
+    # répétition
+    if repetition_transpo.get(zobrist_hash(etat), 0) >= 3:
+        return 0
 
     # 50 demi-coups sans prises
 
