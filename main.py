@@ -9,7 +9,7 @@ from chessfc.game import Action, Coord, Duration, PlayerRole, Score, State
 
 from constantes import *
 from plateau import colonnes_jouables, get_nom
-from regles import jouer
+from regles import jouer, get_etat
 from ia import meilleur_coup, copier_plateau
 from adaptateur import etat_vers_plateau, role_vers_couleur, coup_vers_action
 
@@ -70,7 +70,8 @@ def strategy_fn(game_id: str, environment: Environment, state: State,
 
     en_passant = detecter_en_passant(environment.get("precedent"), plateau, adverse)
 
-    coup = meilleur_coup(plateau, balle, couleur, PROFONDEUR, en_passant)
+    etat = get_etat(plateau, balle, couleur, en_passant)
+    coup = meilleur_coup(etat, PROFONDEUR)
 
     if coup is None:
         ## aucun coup legal: serveur doit normalement conclure la partie
