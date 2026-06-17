@@ -16,8 +16,9 @@ GLYPHS = {
     NFOU: "♗",
     NTOUR: "♖",
     NDAME: "♕",
-    BALLE: "o"
+    BALLE: "o",
 }
+
 
 def glyphe_case(plateau: Plateau, balle: tuple[int, int], l: int, c: int) -> str:
     piece = get_piece(plateau, (l, c))
@@ -35,16 +36,17 @@ def glyphe_case(plateau: Plateau, balle: tuple[int, int], l: int, c: int) -> str
         return glyphe + marque
     return marque + glyphe
 
-def afficher(plateau:Plateau, balle: tuple[int, int]) -> None:
+
+def afficher(plateau: Plateau, balle: tuple[int, int]) -> None:
     marge = "  "  # colonne des numéros de ligne (1 chiffre + 1 espace)
-    bordure_courte = marge + "    "*2 + "+---"*5+"+" + "\n"
-    bordure_longue = marge + "+---"*9+"+" + "\n"
+    bordure_courte = marge + "    " * 2 + "+---" * 5 + "+" + "\n"
+    bordure_longue = marge + "+---" * 9 + "+" + "\n"
 
     str_plateau = ""
 
     # lignes du haut
     for l in range(0, 2):
-        str_plateau += bordure_courte + f"{l+1} " + "    "*2
+        str_plateau += bordure_courte + f"{l+1} " + "    " * 2
         for c in range(2, 7):
             str_plateau += "|" + glyphe_case(plateau, balle, l, c)
         str_plateau += "|\n"
@@ -59,7 +61,7 @@ def afficher(plateau:Plateau, balle: tuple[int, int]) -> None:
     # lignes du bas
     str_plateau += bordure_longue
     for l in range(5, 7):
-        str_plateau += f"{l+1} " + "    "*2
+        str_plateau += f"{l+1} " + "    " * 2
         for c in range(2, 7):
             str_plateau += "|" + glyphe_case(plateau, balle, l, c)
         str_plateau += "|\n" + bordure_courte

@@ -1,7 +1,13 @@
 """Règles du jeu : génération et application des coups."""
 
 from constantes import *
-from plateau import get_piece, set_piece, get_couleur, est_atteignable, colonnes_jouables
+from plateau import (
+    get_piece,
+    set_piece,
+    get_couleur,
+    est_atteignable,
+    colonnes_jouables,
+)
 
 
 def cases_visees(plateau: Plateau, case_src: Case) -> list[Case]:
@@ -12,7 +18,16 @@ def cases_visees(plateau: Plateau, case_src: Case) -> list[Case]:
 
     # cavalier
     if piece in (BCAVA, NCAVA):
-        for dl, dc in ((1, 2), (2, 1), (-1, 2), (-2, 1), (1, -2), (2, -1), (-1, -2), (-2, -1)):
+        for dl, dc in (
+            (1, 2),
+            (2, 1),
+            (-1, 2),
+            (-2, 1),
+            (1, -2),
+            (2, -1),
+            (-1, -2),
+            (-2, -1),
+        ):
             if est_atteignable(l + dl, c + dc):
                 cases.append((l + dl, c + dc))
         return cases
@@ -24,27 +39,36 @@ def cases_visees(plateau: Plateau, case_src: Case) -> list[Case]:
     elif piece in (BFOU, NFOU):
         directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
     elif piece in (BDAME, NDAME):
-        directions = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
+        directions = [
+            (1, 0),
+            (-1, 0),
+            (0, 1),
+            (0, -1),
+            (1, 1),
+            (1, -1),
+            (-1, 1),
+            (-1, -1),
+        ]
 
     if piece in (BTOUR, NTOUR, BFOU, NFOU, BDAME, NDAME):
-        for dl, dc in directions: 
+        for dl, dc in directions:
             nl, nc = l + dl, c + dc
             while est_atteignable(nl, nc):
                 cases.append((nl, nc))
-                if plateau[nl][nc] != VIDE: # obstacle
+                if plateau[nl][nc] != VIDE:  # obstacle
                     break
                 nl += dl
-                nc += dc 
+                nc += dc
         return cases
 
     # pion
     sens = 1 if couleur == BLANC else -1  # avance vers le camp adverse
-    
+
     # prise diagonale
     for dl in (1, -1):
         if est_atteignable(l + dl, c + sens):
             cases.append((l + dl, c + sens))
-    
+
     # tout droit
     if est_atteignable(l, c + sens) and plateau[l][c + sens] in (VIDE, BALLE):
 
@@ -52,18 +76,29 @@ def cases_visees(plateau: Plateau, case_src: Case) -> list[Case]:
         cases.append((l, c + sens))
 
         # avance double au depart
-        if ((c == 1 and couleur == BLANC) or (c == 7 and couleur == NOIR)) and est_atteignable(l, c + 2 * sens) and plateau[l][c + 2 * sens] == VIDE:
+        if (
+            ((c == 1 and couleur == BLANC) or (c == 7 and couleur == NOIR))
+            and est_atteignable(l, c + 2 * sens)
+            and plateau[l][c + 2 * sens] == VIDE
+        ):
             cases.append((l, c + 2 * sens))
 
     return cases
 
-def est_jouable(plateau: Plateau, case_src: Case, case_dst: Case, en_passant: Case | None = None, cases: list[Case] | None = None) -> bool:
+
+def est_jouable(
+    plateau: Plateau,
+    case_src: Case,
+    case_dst: Case,
+    en_passant: Case | None = None,
+    cases: list[Case] | None = None,
+) -> bool:
     piece = get_piece(plateau, case_src)
 
     # verification de la pièce
     if piece not in PIECES:
         return False
-    
+
     # vérification de la case (cases déjà calculé par l'appelant si fourni)
     if cases is None:
         cases = cases_visees(plateau, case_src)
@@ -81,6 +116,7 @@ def est_jouable(plateau: Plateau, case_src: Case, case_dst: Case, en_passant: Ca
 
     return True
 
+
 def cases_passe(plateau: Plateau, balle: Case) -> list[Case]:
     # cases vers lesquelles la pièce sur la balle peut l'envoyer
     piece = get_piece(plateau, balle)
@@ -96,7 +132,10 @@ def cases_passe(plateau: Plateau, balle: Case) -> list[Case]:
             cases.append((l + dl, c + sens))
     return cases
 
-def passe_jouable(plateau: Plateau, balle: Case, case_dst: Case, cases: list[Case] | None = None) -> bool:
+
+def passe_jouable(
+    plateau: Plateau, balle: Case, case_dst: Case, cases: list[Case] | None = None
+) -> bool:
     piece = get_piece(plateau, balle)  # la pièce qui possède le ballon
     if piece not in PIECES:
         return False
@@ -112,13 +151,20 @@ def passe_jouable(plateau: Plateau, balle: Case, case_dst: Case, cases: list[Cas
 
     return True
 
+
 def deplacement(plateau: Plateau, case_src: Case, case_dst: Case) -> None:
     piece_src = get_piece(plateau, case_src)
     set_piece(plateau, case_dst, piece_src)
     set_piece(plateau, case_src, VIDE)
 
-def jouer(plateau: Plateau, balle: Case, case_src: Case, case_dst: Case,
-            en_passant: Case | None = None) -> tuple[Case, Case | None]:
+
+def jouer(
+    plateau: Plateau,
+    balle: Case,
+    case_src: Case,
+    case_dst: Case,
+    en_passant: Case | None = None,
+) -> tuple[Case, Case | None]:
 
     # frappe du ballon
     if case_src == balle:
@@ -126,10 +172,10 @@ def jouer(plateau: Plateau, balle: Case, case_src: Case, case_dst: Case,
             set_piece(plateau, case_dst, BALLE)
         return case_dst, None
 
-    # prise en passant 
+    # prise en passant
     piece = get_piece(plateau, case_src)
     if piece in (BPION, NPION) and case_dst == en_passant:
-        set_piece(plateau, (case_dst[0], case_src[1]), VIDE) ## manger le pion adverse
+        set_piece(plateau, (case_dst[0], case_src[1]), VIDE)  ## manger le pion adverse
 
     # déplacement de la pièce
     deplacement(plateau, case_src, case_dst)
@@ -143,12 +189,16 @@ def jouer(plateau: Plateau, balle: Case, case_src: Case, case_dst: Case,
 
     nouveau_ep: Case | None = None
     if piece in (BPION, NPION) and abs(case_dst[1] - case_src[1]) == 2:
-        nouveau_ep = (case_src[0], (case_src[1] + case_dst[1]) //2 )
-    
+        nouveau_ep = (case_src[0], (case_src[1] + case_dst[1]) // 2)
+
     return balle, nouveau_ep
 
-def get_etat(plateau: Plateau, balle: Case, joueur: int, en_passant: Case | None = None) -> list:
+
+def get_etat(
+    plateau: Plateau, balle: Case, joueur: int, en_passant: Case | None = None
+) -> list:
     return [plateau, balle, joueur, en_passant]
+
 
 def coups_legaux(etat: list) -> list[tuple[Case, Case]]:
     plateau, balle, joueur, en_passant = etat
@@ -161,7 +211,7 @@ def coups_legaux(etat: list) -> list[tuple[Case, Case]]:
             piece = get_piece(plateau, case_src)
             if piece not in PIECES or get_couleur(piece) != joueur:
                 continue
-            
+
             # frappe du ballon
             if case_src == balle:
                 cases = cases_passe(plateau, case_src)
@@ -176,6 +226,7 @@ def coups_legaux(etat: list) -> list[tuple[Case, Case]]:
                         coups.append((case_src, case_dst))
 
     return coups
+
 
 def final(etat: list, coups: list | None = None) -> int | None:
     _, balle, _, _ = etat
@@ -195,4 +246,3 @@ def final(etat: list, coups: list | None = None) -> int | None:
         return 0
 
     return None
-

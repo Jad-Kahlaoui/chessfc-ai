@@ -21,12 +21,12 @@ CORRESPONDANCES = {
 
 def etat_vers_plateau(state: State) -> tuple[Plateau, Case]:
     """
-        - Convertit un State en (plateau, balle)
-        - Les coins hors-croix du State sont ignorés (MUR dans notre code)
-        - Balle est suivie séparement 
+    - Convertit un State en (plateau, balle)
+    - Les coins hors-croix du State sont ignorés (MUR dans notre code)
+    - Balle est suivie séparement
     """
     plateau = plateau_vide()
-    balle: Case = INIT_BALLE 
+    balle: Case = INIT_BALLE
 
     for l in range(NB_LIGNES):
         deb, fin = colonnes_jouables(l)

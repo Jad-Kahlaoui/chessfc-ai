@@ -13,29 +13,32 @@ from zobrist import zobrist_hash
 # Fonction d'évaluation
 # --------------------------------------------------------------------------
 
+
 def copier_plateau(plateau: Plateau) -> Plateau:
     # copie profonde pour simuler
-    # un coup sans abimer le vrai plateau 
+    # un coup sans abimer le vrai plateau
     return [ligne[:] for ligne in plateau]
+
 
 # valeur num de chaque pièce
 VALEURS = {
-    BPION: 1.0, NPION: 1.0,
-    BCAVA: 3.0, NCAVA: 3.0,
-    BFOU: 3.0, NFOU: 3.0,
-    BTOUR: 5.0, NTOUR: 5.0,
-    BDAME: 9.0, NDAME: 9.0,
+    BPION: 1.0,
+    NPION: 1.0,
+    BCAVA: 3.0,
+    NCAVA: 3.0,
+    BFOU: 3.0,
+    NFOU: 3.0,
+    BTOUR: 5.0,
+    NTOUR: 5.0,
+    BDAME: 9.0,
+    NDAME: 9.0,
 }
-
 
 
 ## fonction de calcul de score pour chaque état de la partie
 def evaluer(etat: list) -> float:
     plateau, balle, _, _ = etat
-    # Les Blancs maximisent (ils poussent la balle vers la colonne 8), les Noirs
-    # minimisent (ils poussent vers la colonne 0)
-    # NB : appelée uniquement sur une position non terminale (final() déjà testé
-    # par alphabeta), d'où l'absence de gestion de fin de partie ici.
+    # Les Blancs maximisent , les Noirs minimisent (ils poussent vers la colonne 0)
 
     score = 0.0
 
@@ -48,24 +51,17 @@ def evaluer(etat: list) -> float:
                 else:
                     score -= VALEURS[piece]
 
-    # progression de la balle : plus la colonne est grande, mieux c'est pour
-    # les Blancs (but noir colonne 8), et inversement 
-    # Colonne centrale = 4 -> neutre
+    # progression de la balle
 
-    # [CORRECTION] poids passé de 0.8 à 2.0 : il doit dépasser le « swing » du
-    # bonus de contrôle (±0.5, soit 1.0 au total). Sinon l'IA refuse d'avancer
-    # le ballon (avancer risque de perdre le contrôle dans son horizon) et le
-    # garde au centre indéfiniment -> partie nulle par répétition.
+    # poids arbitraire
     score += (balle[1] - 4) * 2.0
 
     # controle de la balle : bonus pour celui dont une piece occupe la balle
     porteur = get_piece(plateau, balle)
     if porteur in PIECES:
-     score += 0.5 if get_couleur(porteur) == BLANC else -0.5 
+        score += 0.5 if get_couleur(porteur) == BLANC else -0.5
 
-    # [AMELIORATION] proximité du ballon au but progressive 
-    #le centre est déduit de NB_COLONNES -> incitation à mener le ballon
-    # jusqu'au bout, au lieu de le garder au centre
+    # on rapproche le ballon du camp adverse
     POIDS_PROXIMITE_BUT = 1
     centre = (NB_COLONNES - 1) / 2.0
     score += ((balle[1] - centre) ** 3) * POIDS_PROXIMITE_BUT
@@ -74,7 +70,7 @@ def evaluer(etat: list) -> float:
 
 
 def score_coup_rapide(etat: list, coup: tuple[Case, Case]) -> float:
-    plateau, balle, joueur, en_passant = etat
+    plateau, balle, joueur, _en_passant = etat
     case_src, case_dst = coup
     piece_src = get_piece(plateau, case_src)
     piece_dst = get_piece(plateau, case_dst)
@@ -116,18 +112,21 @@ def score_coup_rapide(etat: list, coup: tuple[Case, Case]) -> float:
 def trier_coups(etat: list, coups: list[tuple[Case, Case]]) -> list[tuple[Case, Case]]:
     return sorted(coups, key=lambda coup: score_coup_rapide(etat, coup), reverse=True)
 
+
 # --------------------------------------------------------------------------
-# Stratégie 1 : minmax 
+# Stratégie 1 : minmax
 # --------------------------------------------------------------------------
 
 # Table de transposition , sert à réexplorer même branche avec paramètres alpha/beta différents
-EXACT = 0       # valeur exacte
-BORNE_INF = 1   # valeur minorée (coupure beta)
+EXACT = 0  # valeur exacte
+BORNE_INF = 1  # valeur minorée (coupure beta)
 BORNE_SUP = -1  # valeur majorée (coupure alpha)
 
 
-def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: dict) -> float:
-    # joueur = couleur au trait ; BLANC maximise, NOIR minimise.
+def alphabeta(
+    etat: list, prof: int, alpha: float, beta: float, table_transpo: dict
+) -> float:
+    # joueur = couleur au trait
     plateau, balle, joueur, en_passant = etat
     alpha_initial, beta_initial = alpha, beta
     h = zobrist_hash(etat)
@@ -139,9 +138,9 @@ def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: d
         if flag == EXACT:
             return valeur
         if flag == BORNE_INF:
-            alpha = max(alpha, valeur) # minorant relève alpha
+            alpha = max(alpha, valeur)  # minorant relève alpha
         elif flag == BORNE_SUP:
-            beta = min(beta, valeur) # majorant abaisse beta
+            beta = min(beta, valeur)  # majorant abaisse beta
         if alpha >= beta:
             return valeur
 
@@ -150,13 +149,15 @@ def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: d
     # évaluation en fin d'exploration (but ou pat)
     fin = final(etat, coups)
     if fin is not None:
-        return float(fin * (1000 + prof)) # on ajoute prof pour donner la priorité aux mats rapides
+        return float(
+            fin * (1000 + prof)# on prefere les mats rapides
+        )
 
     if prof == 0:
         return evaluer(etat)
 
     # exploration des coup sinon
-    adversaire = (joueur+1)%2
+    adversaire = (joueur + 1) % 2
 
     if joueur == BLANC:
         valeur = float("-inf")
@@ -164,7 +165,9 @@ def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: d
             copie = copier_plateau(plateau)
             new_balle, new_ep = jouer(copie, balle, case_src, case_dst, en_passant)
             new_etat = get_etat(copie, new_balle, adversaire, new_ep)
-            valeur = max(valeur, alphabeta(new_etat, prof - 1, alpha, beta, table_transpo))
+            valeur = max(
+                valeur, alphabeta(new_etat, prof - 1, alpha, beta, table_transpo)
+            )
             alpha = max(alpha, valeur)
             if alpha >= beta:
                 break  # coupure beta
@@ -174,7 +177,9 @@ def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: d
             copie = copier_plateau(plateau)
             new_balle, new_ep = jouer(copie, balle, case_src, case_dst, en_passant)
             new_etat = get_etat(copie, new_balle, adversaire, new_ep)
-            valeur = min(valeur, alphabeta(new_etat, prof - 1, alpha, beta, table_transpo))
+            valeur = min(
+                valeur, alphabeta(new_etat, prof - 1, alpha, beta, table_transpo)
+            )
             beta = min(beta, valeur)
             if alpha >= beta:
                 break  # coupure alpha
@@ -195,7 +200,9 @@ def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: d
     return valeur
 
 
-def meilleur_coup(etat: list, prof: int, table_transpo: dict | None = None) -> tuple[Case, Case] | None:
+def meilleur_coup(
+    etat: list, prof: int, table_transpo: dict | None = None
+) -> tuple[Case, Case] | None:
     # choisit le coup qui maximise (Blancs) ou minimise (Noirs) la
     # valeur alpha-beta. En cas d'egalité, choix aléatoire
     plateau, balle, joueur, en_passant = etat
@@ -215,7 +222,9 @@ def meilleur_coup(etat: list, prof: int, table_transpo: dict | None = None) -> t
         copie = copier_plateau(plateau)
         new_balle, new_ep = jouer(copie, balle, case_src, case_dst, en_passant)
         new_etat = get_etat(copie, new_balle, adversaire, new_ep)
-        valeur = alphabeta(new_etat, prof - 1, float("-inf"), float("inf"), table_transpo)
+        valeur = alphabeta(
+            new_etat, prof - 1, float("-inf"), float("inf"), table_transpo
+        )
 
         if joueur == BLANC:
             if valeur > meilleure_valeur:
@@ -235,22 +244,26 @@ def meilleur_coup(etat: list, prof: int, table_transpo: dict | None = None) -> t
 
 def joueur_alphabeta(prof: int = 2):
     table_transpo: dict = {}  # conservée d'un coup à l'autre pour ce joueur
+
     def strat(etat: list) -> tuple[Case, Case] | None:
         return meilleur_coup(etat, prof, table_transpo)
+
     return strat
 
 
 def joueur_iteratif(prof_max: int = 4, temps_max: float | None = None):
     table_transpo: dict = {}  # conservée d'un coup à l'autre
+
     def strat(etat: list) -> tuple[Case, Case] | None:
         debut = time.monotonic()
         coup = None
-        for prof in range(1, prof_max + 1):
+        for prof in range(3, prof_max + 1):
             coup = meilleur_coup(etat, prof, table_transpo)
             # on s'arrête à la moitié su temps
             if temps_max is not None and time.monotonic() - debut >= temps_max / 2:
                 break
         return coup
+
     return strat
 
 
@@ -258,8 +271,10 @@ def joueur_iteratif(prof_max: int = 4, temps_max: float | None = None):
 # Moteur de partie automatique (IA vs IA, ou test)
 # --------------------------------------------------------------------------
 
-def jouer_partie(strat_blanc, strat_noir, debug: bool = False,
-                 max_coups: int = 200) -> int | None:
+
+def jouer_partie(
+    strat_blanc, strat_noir, debug: bool = False, max_coups: int = 200
+) -> int | None:
 
     etat = get_etat(plateau_init(), INIT_BALLE, BLANC)
 
@@ -289,6 +304,7 @@ def jouer_partie(strat_blanc, strat_noir, debug: bool = False,
 
     return None
 
+
 # --------------------------------------------------------------------------
-# Stratégie 2 : TODO A faire  
+# Stratégie 2 : TODO A faire
 # --------------------------------------------------------------------------

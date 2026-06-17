@@ -16,9 +16,7 @@ CLES_PIECES = {
 
 # une clé par case possible pour la balle
 CLES_BALLE = {
-    (l, c): rdgen.getrandbits(64)
-    for l in range(NB_LIGNES)
-    for c in range(NB_COLONNES)
+    (l, c): rdgen.getrandbits(64) for l in range(NB_LIGNES) for c in range(NB_COLONNES)
 }
 
 # une clé pour le joueur (tour aux noirs ou blancs)
@@ -26,10 +24,9 @@ CLE_JOUEUR = rdgen.getrandbits(64)
 
 # une clé par case cible d'en passant
 CLES_EN_PASSANT = {
-    (l, c): rdgen.getrandbits(64)
-    for l in range(NB_LIGNES)
-    for c in range(NB_COLONNES)
+    (l, c): rdgen.getrandbits(64) for l in range(NB_LIGNES) for c in range(NB_COLONNES)
 }
+
 
 def zobrist_hash(etat: list) -> int:
     plateau, balle, joueur, en_passant = etat

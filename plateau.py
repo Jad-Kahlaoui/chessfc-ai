@@ -17,9 +17,11 @@ def est_atteignable(l: int, c: int) -> bool:
     deb, fin = colonnes_jouables(l)
     return deb <= c < fin
 
+
 def get_nom(case: tuple[int, int]) -> str:
     l, c = case
     return f"{chr(ord('A') + c)}{l + 1}"
+
 
 def recherche_nom(nom_case: str) -> tuple[int, int]:
     # vérification du nom reçu
@@ -36,6 +38,7 @@ def recherche_nom(nom_case: str) -> tuple[int, int]:
 
     return (l, c)
 
+
 def plateau_vide() -> Plateau:
     plateau = [[MUR] * NB_COLONNES for _ in range(NB_LIGNES)]
     for l in range(NB_LIGNES):
@@ -43,6 +46,7 @@ def plateau_vide() -> Plateau:
         for c in range(deb, fin):
             plateau[l][c] = VIDE
     return plateau
+
 
 def plateau_init() -> Plateau:
     plateau = plateau_vide()
@@ -61,13 +65,16 @@ def plateau_init() -> Plateau:
     set_piece(plateau, INIT_BALLE, BALLE)
     return plateau
 
-def get_piece(plateau: Plateau, case:tuple[int, int]) -> int:
+
+def get_piece(plateau: Plateau, case: tuple[int, int]) -> int:
     l, c = case
     return plateau[l][c]
 
-def set_piece(plateau: Plateau, case:tuple[int, int], valeur: int) -> None:
+
+def set_piece(plateau: Plateau, case: tuple[int, int], valeur: int) -> None:
     l, c = case
     plateau[l][c] = valeur
+
 
 def get_couleur(piece: int) -> int:
     if piece in (BPION, BCAVA, BFOU, BTOUR, BDAME):

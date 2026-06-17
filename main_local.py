@@ -37,7 +37,7 @@ def coup_humain(etat: list) -> tuple[Case, Case] | None:
             legal = passe_jouable(plateau, balle, case_dst)
         else:
             # déplacement de la pièce
-            legal = est_jouable(plateau, case_src, case_dst, en_passant)  
+            legal = est_jouable(plateau, case_src, case_dst, en_passant)
         if not legal:
             print("Coup illégal, réessaie.\n")
             continue
@@ -46,7 +46,7 @@ def coup_humain(etat: list) -> tuple[Case, Case] | None:
 
 
 # Boucle de jeu, par défaut 2 humains
-# TODO Changez avec serv du prof 
+# TODO Changez avec serv du prof
 def play(strat_blanc=coup_humain, strat_noir=coup_humain, max_coups: int = 100) -> None:
     etat = get_etat(plateau_init(), INIT_BALLE, BLANC)
 
@@ -92,7 +92,7 @@ def play(strat_blanc=coup_humain, strat_noir=coup_humain, max_coups: int = 100) 
 
 
 if __name__ == "__main__":
-    # petit menu de sélection des joueurs 
+    # petit menu de sélection des joueurs
     ## TODO adapter avec serveur prof
     print("Chess FC")
     print("1) Humain vs Humain")
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     elif choix == "3":
         play(joueur_alphabeta(4), coup_humain)
     elif choix == "4":
-        play(joueur_alphabeta(4), joueur_iteratif(10, 3))
+        play(joueur_alphabeta(4), joueur_iteratif(10, 1))
         # play(joueur_alphabeta(4), joueur_alphabeta(4))
     else:
         play(coup_humain, coup_humain)
