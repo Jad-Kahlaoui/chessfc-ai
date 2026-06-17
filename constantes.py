@@ -1,3 +1,5 @@
+"""Constantes du jeu : couleurs, pièces et géométrie du plateau."""
+
 # Couleurs / joueurs
 BLANC = 0
 NOIR = 1

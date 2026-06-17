@@ -1,7 +1,9 @@
+"""Affichage console du plateau."""
+
 from constantes import *
 from plateau import get_piece, get_couleur
 
-# Symboles d'affichage 
+# Symboles d'affichage
 GLYPHS = {
     VIDE: " ",
     BPION: "♟",
@@ -69,4 +71,3 @@ def afficher(plateau:Plateau, balle: tuple[int, int]) -> None:
     str_plateau += "\n"
 
     print(str_plateau)
-    return None

@@ -1,6 +1,7 @@
+"""Règles du jeu : génération et application des coups."""
+
 from constantes import *
 from plateau import get_piece, set_piece, get_couleur, est_atteignable, colonnes_jouables
-from zobrist import zobrist_hash
 
 
 def cases_visees(plateau: Plateau, case_src: Case) -> list[Case]:
@@ -16,14 +17,14 @@ def cases_visees(plateau: Plateau, case_src: Case) -> list[Case]:
                 cases.append((l + dl, c + dc))
         return cases
 
-    # tour / fou
+    # tour / fou / dame
+    directions = []
     if piece in (BTOUR, NTOUR):
-        directions = ((1, 0), (-1, 0), (0, 1), (0, -1))
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
     elif piece in (BFOU, NFOU):
-        directions = ((1, 1), (1, -1), (-1, 1), (-1, -1))
+        directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
     elif piece in (BDAME, NDAME):
-        directions = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1))
-    
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
 
     if piece in (BTOUR, NTOUR, BFOU, NFOU, BDAME, NDAME):
         for dl, dc in directions: 
@@ -78,20 +79,39 @@ def est_jouable(plateau: Plateau, case_src: Case, case_dst: Case, en_passant: Ca
 
     return True
 
+def cases_passe(plateau: Plateau, balle: Case) -> list[Case]:
+    # cases vers lesquelles la pièce sur la balle peut l'envoyer
+    piece = get_piece(plateau, balle)
+    if piece not in (BPION, NPION):
+        return cases_visees(plateau, balle)
+
+    # le pion vise sa case avant (occupée ou non) et ses deux diagonales avant
+    l, c = balle
+    sens = 1 if get_couleur(piece) == BLANC else -1
+    cases = []
+    for dl in (0, 1, -1):
+        if est_atteignable(l + dl, c + sens):
+            cases.append((l + dl, c + sens))
+    return cases
+
 def passe_jouable(plateau: Plateau, balle: Case, case_dst: Case) -> bool:
     piece = get_piece(plateau, balle)  # la pièce qui possède le ballon
-    cible = get_piece(plateau,case_dst)
-    if piece in (BPION,NPION):
-        if case_dst[0] != balle[0]:
-            return cible in PIECES
-    return piece in PIECES and case_dst in cases_visees(plateau, balle) 
+    if piece not in PIECES:
+        return False
+    if case_dst not in cases_passe(plateau, balle):
+        return False
+
+    # le pion passe devant lui (case occupée ou non), mais en diagonale
+    # uniquement sur une pièce (alliée ou adverse)
+    if piece in (BPION, NPION) and case_dst[0] != balle[0]:
+        return get_piece(plateau, case_dst) in PIECES
+
+    return True
 
 def deplacement(plateau: Plateau, case_src: Case, case_dst: Case) -> None:
     piece_src = get_piece(plateau, case_src)
     set_piece(plateau, case_dst, piece_src)
     set_piece(plateau, case_src, VIDE)
-
-    return None
 
 def jouer(plateau: Plateau, balle: Case, case_src: Case, case_dst: Case,
             en_passant: Case | None = None) -> tuple[Case, Case | None]:
@@ -138,20 +158,21 @@ def coups_legaux(etat: list) -> list[tuple[Case, Case]]:
             if piece not in PIECES or get_couleur(piece) != joueur:
                 continue
             
-            # pièce jouable
-            for case_dst in cases_visees(plateau, case_src):
-                # frappe du ballon
-                if case_src == balle:
+            # frappe du ballon
+            if case_src == balle:
+                for case_dst in cases_passe(plateau, case_src):
                     if passe_jouable(plateau, balle, case_dst):
                         coups.append((case_src, case_dst))
-                # déplacement
-                elif est_jouable(plateau, case_src, case_dst, en_passant):
-                    coups.append((case_src, case_dst))
+            # déplacement
+            else:
+                for case_dst in cases_visees(plateau, case_src):
+                    if est_jouable(plateau, case_src, case_dst, en_passant):
+                        coups.append((case_src, case_dst))
 
     return coups
 
-def final(etat: list, repetition_transpo: dict[int, int], coups: list | None = None) -> bool:
-    plateau, balle, joueur, en_passant = etat
+def final(etat: list, coups: list | None = None) -> int | None:
+    _, balle, _, _ = etat
 
     # but dans les cages blanches
     if balle[1] in (0, 1):
@@ -166,12 +187,6 @@ def final(etat: list, repetition_transpo: dict[int, int], coups: list | None = N
         coups = coups_legaux(etat)
     if coups == []:
         return 0
-
-    # répétition
-    if repetition_transpo.get(zobrist_hash(etat), 0) >= 3:
-        return 0
-
-    # 50 demi-coups sans prises
 
     return None
 

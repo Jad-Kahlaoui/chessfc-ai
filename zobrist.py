@@ -1,3 +1,5 @@
+"""Hachage de Zobrist des états du jeu."""
+
 import random
 
 from constantes import *

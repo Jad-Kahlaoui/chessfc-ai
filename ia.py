@@ -1,3 +1,5 @@
+"""IA : fonction d'évaluation et recherche alpha-bêta."""
+
 import random
 
 from constantes import *
@@ -26,7 +28,7 @@ VALEURS = {
 
 ## fonction de calcul de score pour chaque état de la partie
 def evaluer(etat: list) -> float:
-    plateau, balle, joueur, en_passant = etat
+    plateau, balle, _, _ = etat
     # Les Blancs maximisent (ils poussent la balle vers la colonne 8), les Noirs
     # minimisent (ils poussent vers la colonne 0)
     # NB : appelée uniquement sur une position non terminale (final() déjà testé
@@ -115,15 +117,11 @@ BORNE_INF = 1   # valeur minorée (coupure beta)
 BORNE_SUP = -1  # valeur majorée (coupure alpha)
 
 
-def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: dict, repetition_transpo: dict) -> float:
+def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: dict) -> float:
     # joueur = couleur au trait ; BLANC maximise, NOIR minimise.
     plateau, balle, joueur, en_passant = etat
     alpha_initial, beta_initial = alpha, beta
     h = zobrist_hash(etat)
-
-    # répétition dans la ligne d'analyse (logique 2-fold)
-    if repetition_transpo.get(h, 0) >= 2:
-        return 0.0 # testé AVANT l'évaluation, on ne mémorise pas le noeud
 
     # consultation des positions déjà évaluées
     entree = table_transpo.get(h)
@@ -140,8 +138,8 @@ def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: d
 
     coups = trier_coups(etat, coups_legaux(etat))
 
-    # évaluation en fin d'exploration (but, pat ou répétition)
-    fin = final(etat, repetition_transpo, coups)
+    # évaluation en fin d'exploration (but ou pat)
+    fin = final(etat, coups)
     if fin is not None:
         return float(fin * (1000 + prof)) # on ajoute prof pour donner la priorité aux mats rapides
 
@@ -157,13 +155,7 @@ def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: d
             copie = copier_plateau(plateau)
             new_balle, new_ep = jouer(copie, balle, case_src, case_dst, en_passant)
             new_etat = get_etat(copie, new_balle, adversaire, new_ep)
-            nh = zobrist_hash(new_etat)
-
-            # make/unmake pour remonter l'historique de repetitions
-            repetition_transpo[nh] = repetition_transpo.get(nh, 0) + 1   # make
-            valeur = max(valeur, alphabeta(new_etat, prof - 1, alpha, beta, table_transpo, repetition_transpo))
-            repetition_transpo[nh] -= 1 # unmake
-            
+            valeur = max(valeur, alphabeta(new_etat, prof - 1, alpha, beta, table_transpo))
             alpha = max(alpha, valeur)
             if alpha >= beta:
                 break  # coupure beta
@@ -173,13 +165,7 @@ def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: d
             copie = copier_plateau(plateau)
             new_balle, new_ep = jouer(copie, balle, case_src, case_dst, en_passant)
             new_etat = get_etat(copie, new_balle, adversaire, new_ep)
-            nh = zobrist_hash(new_etat)
-
-            # make/unmake pour remonter l'historique de repetitions
-            repetition_transpo[nh] = repetition_transpo.get(nh, 0) + 1   # make
-            valeur = min(valeur, alphabeta(new_etat, prof - 1, alpha, beta, table_transpo, repetition_transpo))
-            repetition_transpo[nh] -= 1  # unmake
-            
+            valeur = min(valeur, alphabeta(new_etat, prof - 1, alpha, beta, table_transpo))
             beta = min(beta, valeur)
             if alpha >= beta:
                 break  # coupure alpha
@@ -200,7 +186,7 @@ def alphabeta(etat: list, prof: int, alpha: float, beta: float, table_transpo: d
     return valeur
 
 
-def meilleur_coup(etat: list, prof: int, historique: dict[int, int] | None = None, table_transpo: dict | None = None) -> tuple[Case, Case] | None:
+def meilleur_coup(etat: list, prof: int, table_transpo: dict | None = None) -> tuple[Case, Case] | None:
     # choisit le coup qui maximise (Blancs) ou minimise (Noirs) la
     # valeur alpha-beta. En cas d'egalité, choix aléatoire
     plateau, balle, joueur, en_passant = etat
@@ -215,21 +201,12 @@ def meilleur_coup(etat: list, prof: int, historique: dict[int, int] | None = Non
     # on réutilise la table_transpo passé en argument (si présente)
     if table_transpo is None:
         table_transpo = {}
-    if historique:  # historique non vide
-        repetition_transpo = dict(historique) # copie de l'historique
-    else:
-        repetition_transpo = {zobrist_hash(etat): 1} #initialisation de l'historique
 
     for case_src, case_dst in coups:
         copie = copier_plateau(plateau)
         new_balle, new_ep = jouer(copie, balle, case_src, case_dst, en_passant)
         new_etat = get_etat(copie, new_balle, adversaire, new_ep)
-        nh = zobrist_hash(new_etat)
-
-        # make/unmake pour remonter l'historique de repetitions
-        repetition_transpo[nh] = repetition_transpo.get(nh, 0) + 1   # make
-        valeur = alphabeta(new_etat, prof - 1, float("-inf"), float("inf"), table_transpo, repetition_transpo)
-        repetition_transpo[nh] -= 1 # unmake
+        valeur = alphabeta(new_etat, prof - 1, float("-inf"), float("inf"), table_transpo)
 
         if joueur == BLANC:
             if valeur > meilleure_valeur:
@@ -249,8 +226,8 @@ def meilleur_coup(etat: list, prof: int, historique: dict[int, int] | None = Non
 
 def joueur_alphabeta(prof: int = 2):
     table_transpo: dict = {}  # conservée d'un coup à l'autre pour ce joueur
-    def strat(etat: list, historique: dict[int, int] | None = None) -> tuple[Case, Case] | None:
-        return meilleur_coup(etat, prof, historique, table_transpo)
+    def strat(etat: list) -> tuple[Case, Case] | None:
+        return meilleur_coup(etat, prof, table_transpo)
     return strat
 
 
@@ -262,16 +239,12 @@ def jouer_partie(strat_blanc, strat_noir, debug: bool = False,
                  max_coups: int = 200) -> int | None:
 
     etat = get_etat(plateau_init(), INIT_BALLE, BLANC)
-    repetition_transpo: dict[int, int] = {}  # comptage des positions (répétition)
 
     for _ in range(max_coups):
         plateau, balle, trait, en_passant = etat
 
-        # comptage de la position courante puis test de fin de partie
-        h = zobrist_hash(etat)
-        repetition_transpo[h] = repetition_transpo.get(h, 0) + 1
-
-        resultat = final(etat, repetition_transpo)
+        # test de fin de partie
+        resultat = final(etat)
         if resultat is not None:
             if debug:
                 afficher(plateau, balle)
@@ -279,7 +252,7 @@ def jouer_partie(strat_blanc, strat_noir, debug: bool = False,
             return resultat
 
         strat = strat_blanc if trait == BLANC else strat_noir
-        coup = strat(etat, repetition_transpo)
+        coup = strat(etat)
         if coup is None:
             return 0  # aucun coup
 

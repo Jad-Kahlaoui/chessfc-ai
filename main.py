@@ -1,5 +1,4 @@
-## point d'entrée pour jouer contre le serveur via encapsulation de l'IA
-## dans les trois callbacks avant d'appeler start()
+"""Point d'entrée réseau : encapsule l'IA dans les callbacks de la lib chessfc."""
 
 import sys
 
@@ -11,7 +10,6 @@ from constantes import *
 from plateau import colonnes_jouables, get_nom
 from regles import jouer, get_etat
 from ia import meilleur_coup, copier_plateau
-from zobrist import zobrist_hash
 from adaptateur import etat_vers_plateau, role_vers_couleur, coup_vers_action
 
 ## profondeur de recherche de l'alpha-beta - TODO à modifier
@@ -59,7 +57,7 @@ def start_fn(game_id: str, role: PlayerRole, start_clock: Duration,
     print(f"  limite de tours: {limit_number_of_turn} (0 = aucune)")
     
     ## table : table de transposition conservée d'un coup à l'autre
-    return {"precedent": None, "historique": {}, "table": {}}
+    return {"precedent": None, "table": {}}
 
 
 def strategy_fn(game_id: str, environment: Environment, state: State,
@@ -72,16 +70,12 @@ def strategy_fn(game_id: str, environment: Environment, state: State,
 
     etat = get_etat(plateau, balle, couleur, en_passant)
 
-    ## on compte la position courante dans l'historique réel pour anticiper les répétitions
-    historique = dict(environment.get("historique") or {})
-    historique[zobrist_hash(etat)] = historique.get(zobrist_hash(etat), 0) + 1
-
     ## table réutilisée
     table_transpo = environment.get("table")
     if table_transpo is None:
         table_transpo = {}
 
-    coup = meilleur_coup(etat, PROFONDEUR, historique, table_transpo)
+    coup = meilleur_coup(etat, PROFONDEUR, table_transpo)
 
     if coup is None:
         ## aucun coup legal: serveur doit normalement conclure la partie
@@ -96,7 +90,6 @@ def strategy_fn(game_id: str, environment: Environment, state: State,
     jouer(prevision, balle, case_src, case_dst, en_passant)
     environment = dict(environment)
     environment["precedent"] = prevision
-    environment["historique"] = historique
     environment["table"] = table_transpo
 
     return coup_vers_action(case_src, case_dst), environment

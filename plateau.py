@@ -1,3 +1,5 @@
+"""Construction du plateau, coordonnées et accès aux cases."""
+
 from constantes import *
 
 
@@ -70,7 +72,6 @@ def set_piece(plateau: Plateau, case:tuple[int, int], valeur: int) -> None:
 def get_couleur(piece: int) -> int:
     if piece in (BPION, BCAVA, BFOU, BTOUR, BDAME):
         return BLANC
-    elif piece in (NPION, NCAVA, NFOU, NTOUR, NDAME):
+    if piece in (NPION, NCAVA, NFOU, NTOUR, NDAME):
         return NOIR
-    else:
-        raise ValueError(f"Pièce invalide : {piece}")
+    raise ValueError(f"Pièce invalide : {piece}")

@@ -1,4 +1,4 @@
-## couche de traduction entre bibliothèque chessfc et notre moteur
+"""Traduction entre la bibliothèque chessfc et notre moteur."""
 
 from constantes import *
 from chessfc.game import Piece, PlayerRole, Coord, Action, State

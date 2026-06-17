@@ -1,13 +1,14 @@
+"""Partie locale en console (humain et/ou IA)."""
+
 from constantes import *
 from plateau import plateau_init, get_piece, get_couleur, recherche_nom, get_nom
 from regles import passe_jouable, est_jouable, jouer, final, get_etat
 from affichage import afficher
 from ia import joueur_alphabeta
-from zobrist import zobrist_hash
 
 
 # coup d'un humain : saisie clavier "B3 D3" etc...
-def coup_humain(etat: list, historique: dict[int, int] | None = None) -> tuple[Case, Case] | None:
+def coup_humain(etat: list) -> tuple[Case, Case] | None:
     plateau, balle, joueur, en_passant = etat
     while True:
         print("- Entrez votre coup (ex: B3 D3)")
@@ -46,39 +47,35 @@ def coup_humain(etat: list, historique: dict[int, int] | None = None) -> tuple[C
 
 # Boucle de jeu, par défaut 2 humains
 # TODO Changez avec serv du prof 
-def play(strat_blanc=coup_humain, strat_noir=coup_humain) -> None:
+def play(strat_blanc=coup_humain, strat_noir=coup_humain, max_coups: int = 100) -> None:
     etat = get_etat(plateau_init(), INIT_BALLE, BLANC)
-    repetition_transpo: dict[int, int] = {}  # comptage des positions (répétition)
 
-    while True:
+    for _ in range(max_coups):
         plateau, balle, to_move, en_passant = etat
         couleur_coup = "Blancs" if to_move == BLANC else "Noirs"
 
         # affichage du plateau
         afficher(plateau, balle)
 
-        # comptage de la position courante puis test de fin de partie
-        h = zobrist_hash(etat)
-        repetition_transpo[h] = repetition_transpo.get(h, 0) + 1
-
-        resultat = final(etat, repetition_transpo)
+        # test de fin de partie
+        resultat = final(etat)
         if resultat is not None:
             if resultat == 1:
                 print("But ! Les Blancs ont gagné.\n")
             elif resultat == -1:
                 print("But ! Les Noirs ont gagné.\n")
             else:
-                print("Match nul (pat ou triple répétition).\n")
-            break
+                print("Match nul (pat).\n")
+            return None
 
-        # détermination du coup 
+        # détermination du coup
         print(f"Coup aux {couleur_coup}\n")
         strat = strat_blanc if to_move == BLANC else strat_noir
-        coup = strat(etat, repetition_transpo)
+        coup = strat(etat)
 
         if coup is None:  # interruption de partie par humain
             print("Partie interrompue.\n")
-            break
+            return None
 
         case_src, case_dst = coup
 
@@ -89,6 +86,8 @@ def play(strat_blanc=coup_humain, strat_noir=coup_humain) -> None:
         balle, en_passant = jouer(plateau, balle, case_src, case_dst, en_passant)
         etat = get_etat(plateau, balle, (to_move + 1) % 2, en_passant)
 
+    # nombre de coups maximum atteint
+    print("Match nul (nombre de coups maximum atteint).\n")
     return None
 
 
@@ -107,6 +106,6 @@ if __name__ == "__main__":
     elif choix == "3":
         play(joueur_alphabeta(4), coup_humain)
     elif choix == "4":
-        play(joueur_alphabeta(4), joueur_alphabeta(4))
+        play(joueur_alphabeta(3), joueur_alphabeta(3))
     else:
         play(coup_humain, coup_humain)
