@@ -13,8 +13,8 @@ from regles import jouer, get_etat
 from ia import meilleur_coup, copier_plateau
 from adaptateur import etat_vers_plateau, role_vers_couleur, coup_vers_action
 
-## profondeur de recherche de l'alpha-beta - TODO à modifier
-PROFONDEUR = 3
+## profondeur de recherche de l'alpha-beta - TODO à modifier , 6 ou 7 semble une profondeur correct
+PROFONDEUR = 7
 
 
 def detecter_en_passant(precedent: Plateau | None, courant: Plateau, couleur_adverse: int) -> Case | None:
