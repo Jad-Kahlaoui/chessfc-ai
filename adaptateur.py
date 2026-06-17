@@ -31,7 +31,7 @@ def etat_vers_plateau(state: State) -> tuple[Plateau, Case]:
     for l in range(NB_LIGNES):
         deb, fin = colonnes_jouables(l)
         for c in range(deb, fin):
-            piece, role, a_balle = state[l][c]
+            piece, role, a_balle = state.board.board[l][c]  ## state.board.board
             code = CORRESPONDANCES.get((piece, role), VIDE)
             plateau[l][c] = code
             if a_balle:

@@ -39,7 +39,25 @@ class Piece(Enum):
     QUEEN = 5
 
 
-State = tuple[tuple[tuple[Piece, PlayerRole, bool], ...], ...]
+@dataclass
+class Team:
+    pieces: tuple[Coord, Coord, Coord, Coord, Coord, Coord]
+    captured: int
+    pawns_info: int
+
+
+@dataclass
+class Board:
+    board: tuple[tuple[tuple[Piece, PlayerRole, bool], ...], ...]
+    en_passant: tuple[Coord, ...]
+
+
+@dataclass
+class State:
+    board: Board
+    current_player: PlayerRole
+    current_turn: int
+
 
 DEFAULT_STATE = (
     (

@@ -26,6 +26,8 @@ VALEURS = {
     BDAME: 9.0, NDAME: 9.0,
 }
 
+
+
 ## fonction de calcul de score pour chaque état de la partie
 def evaluer(etat: list) -> float:
     plateau, balle, _, _ = etat
@@ -49,18 +51,24 @@ def evaluer(etat: list) -> float:
     # les Blancs (but noir colonne 8), et inversement 
     # Colonne centrale = 4 -> neutre
 
-    score += (balle[1] - 4) * 0.8 
+    # [CORRECTION] poids passé de 0.8 à 2.0 : il doit dépasser le « swing » du
+    # bonus de contrôle (±0.5, soit 1.0 au total). Sinon l'IA refuse d'avancer
+    # le ballon (avancer risque de perdre le contrôle dans son horizon) et le
+    # garde au centre indéfiniment -> partie nulle par répétition.
+    score += (balle[1] - 4) * 2.0
 
     # controle de la balle : bonus pour celui dont une piece occupe la balle
     porteur = get_piece(plateau, balle)
     if porteur in PIECES:
      score += 0.5 if get_couleur(porteur) == BLANC else -0.5 
 
-    # bonus/malus si la balle est proche du but
-    if balle[1] >= 6:
-        score += 3.0
-    elif balle[1] <= 2:
-        score -= 3.0
+    # [AMELIORATION] proximité du ballon au but progressive 
+    #le centre est déduit de NB_COLONNES -> incitation à mener le ballon
+    # jusqu'au bout, au lieu de le garder au centre
+    POIDS_PROXIMITE_BUT = 1
+    centre = (NB_COLONNES - 1) / 2.0
+    score += ((balle[1] - centre) ** 3) * POIDS_PROXIMITE_BUT
+
     return score
 
 

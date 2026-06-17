@@ -1,15 +1,17 @@
 from typing import Optional
 
-from .client import Client, ClientOption, ServerOption, PlayerCallbacks
-from .player_types import StartFn, StrategyFn, FinalFn
+from .client import Client, ClientOption, ServerOption, PlayerCallbacks, Environment
+from .player_types import StartFn, StrategyFn, FinalFn, NewMatchBehaviour
 
 
 def start(
-        start_fn: StartFn,
-        strategy_fn: StrategyFn,
-        final_fn: FinalFn,
-        client_option: Optional[ClientOption] = None,
-        server_option: Optional[ServerOption] = None,
+    start_fn: StartFn,
+    strategy_fn: StrategyFn,
+    final_fn: FinalFn,
+    client_option: Optional[ClientOption] = None,
+    server_option: Optional[ServerOption] = None,
+    environment: Optional[Environment] = None,
+    new_match_behaviour: NewMatchBehaviour = NewMatchBehaviour.PASS_NONE,
 ) -> None:
     """
     Start the communication loop with the server
@@ -35,5 +37,7 @@ def start(
     if server_option is None:
         server_option = ServerOption()
 
-    client = Client(player_callbacks, client_option, server_option)
+    client = Client(
+        player_callbacks, client_option, server_option, environment, new_match_behaviour
+    )
     client.run()
