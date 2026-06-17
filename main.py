@@ -5,10 +5,11 @@ import sys
 
 from chessfc.player import start
 from chessfc.player_types import Environment, ClientOption, ServerOption
-from chessfc.game import Action, Coord, Duration, PlayerRole, Score, State
+from chessfc.game import Action, Coord, Duration, PlayerRole, Score, State, MaybeMaybeAction
 
 from constantes import *
 from plateau import colonnes_jouables, get_nom
+from affichage import afficher
 from regles import jouer, get_etat
 from ia import meilleur_coup, copier_plateau
 from zobrist import zobrist_hash
@@ -49,22 +50,26 @@ def detecter_en_passant(precedent: Plateau | None, courant: Plateau, couleur_adv
 #         Callbacks
 # ---------------------------------------------------------------------------
 
-def start_fn(game_id: str, role: PlayerRole, start_clock: Duration,
-             play_clock: Duration, total_clock: Duration,
-             limit_number_of_turn: int) -> Environment:
+def start_fn(game_id: str, environment: Environment, role: PlayerRole,
+             start_clock: Duration, play_clock: Duration, total_clock: Duration,
+             limit_number_of_turn: int, state: State,
+             actions: MaybeMaybeAction) -> Environment:
     print(f"Debut de partie {game_id} : nous jouons "
           f"{'les Blancs' if role == PlayerRole.WHITE else 'les Noirs'}")
     print(f"  temps par tour : {play_clock} ns (0 = illimite)")
     print(f"  temps total    : {total_clock} ns (0 = illimite)")
     print(f"  limite de tours: {limit_number_of_turn} (0 = aucune)")
     
-    ## table : table de transposition conservée d'un coup à l'autre
-    return {"precedent": None, "historique": {}, "table": {}}
+    ## precedent: plateau du coup d'avant
+    ## historique : comptage des positions réelles (répétitions)
+    return {"precedent": None, "historique": {}}
 
 
 def strategy_fn(game_id: str, environment: Environment, state: State,
-                role: PlayerRole, player_clock: Duration) -> tuple[Action, Environment]:
+                actions: MaybeMaybeAction, role: PlayerRole,
+                player_clock: Duration) -> tuple[Action, Environment]:
     plateau, balle = etat_vers_plateau(state)
+    afficher(plateau, balle)  
     couleur = role_vers_couleur(role)
     adverse = (couleur + 1) % 2
 
@@ -76,12 +81,12 @@ def strategy_fn(game_id: str, environment: Environment, state: State,
     historique = dict(environment.get("historique") or {})
     historique[zobrist_hash(etat)] = historique.get(zobrist_hash(etat), 0) + 1
 
-    ## table réutilisée
-    table_transpo = environment.get("table")
-    if table_transpo is None:
-        table_transpo = {}
-
-    coup = meilleur_coup(etat, PROFONDEUR, historique, table_transpo)
+    ## [CORRECTION] table de transposition recreee a CHAQUE tour. Ses valeurs
+    ## dependent du contexte de repetition courant (alphabeta renvoie 0 sur une
+    ## repetition) : les conserver d'un tour a l'autre empoisonnait la recherche
+    ## et menait a des parties toujours nulles. La table sert toujours a
+    ## l'interieur d'un meme coup, on ne la partage juste plus entre les coups.
+    coup = meilleur_coup(etat, PROFONDEUR, historique, {})
 
     if coup is None:
         ## aucun coup legal: serveur doit normalement conclure la partie
@@ -97,13 +102,13 @@ def strategy_fn(game_id: str, environment: Environment, state: State,
     environment = dict(environment)
     environment["precedent"] = prevision
     environment["historique"] = historique
-    environment["table"] = table_transpo
 
     return coup_vers_action(case_src, case_dst), environment
 
 
 def final_fn(game_id: str, environment: Environment, state: State,
-             score: Score, role: PlayerRole, player_clock: Duration) -> None:
+             actions: MaybeMaybeAction, score: Score, role: PlayerRole,
+             player_clock: Duration) -> None:
     couleur = role_vers_couleur(role)
     if score == 0:
         resultat = "match nul"

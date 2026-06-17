@@ -1,10 +1,10 @@
 from collections import deque
+from copy import deepcopy
 from dataclasses import dataclass
 from socket import create_connection
 import threading
 from typing import Self, TypeVar, Generic, Optional, Never
 from websockets.sync.client import connect, Connection
-from websockets.exceptions import ConnectionClosed
 
 from .response import ResponseBuilder, Response
 from .request import (
@@ -21,7 +21,6 @@ from .game import (
     State,
     Action,
     Piece,
-    DEFAULT_STATE,
 )
 from .player_types import (
     StartFn,
@@ -29,6 +28,7 @@ from .player_types import (
     FinalFn,
     Environment,
     ClientOption,
+    NewMatchBehaviour,
     ServerOption,
 )
 
@@ -148,6 +148,8 @@ class Client:
         player_callbacks: PlayerCallbacks,
         client_option: ClientOption,
         server_option: ServerOption,
+        environment: Environment,
+        new_match_behaviour: NewMatchBehaviour,
     ) -> None:
         self.read_from = Channel[RequestInfo]()
         self.send_to = Channel[Response]()
@@ -168,7 +170,9 @@ class Client:
         self.role = PlayerRole.NONE
 
         self.player_callbacks = player_callbacks
-        self.environment: Environment = None
+        self.new_match_behaviour = new_match_behaviour
+        self.first_environment = deepcopy(environment)
+        self.environment = environment
 
     def __read_pump(self: Self, status: Mutex[bool]) -> Never:
         while True:
@@ -197,7 +201,7 @@ class Client:
     def __wait_for_info(self: Self, status: Mutex[bool]) -> None:
         status.set(True)
 
-    def __wait_for_start(self: Self, status: Mutex[bool]) -> None:
+    def __wait_for_start(self: Self, status: Mutex[bool]) -> State:
         while True:
             request = self.read_from.recv()
             if isinstance(request, StartInfo):
@@ -207,45 +211,73 @@ class Client:
 
                 self.environment = self.player_callbacks.start_fn(
                     request.game_id,
+                    self.environment,
                     request.role,
                     request.start_clock,
                     request.play_clock,
                     request.total_clock,
                     request.limit_turn_number,
+                    request.state,
+                    request.actions,
                 )
 
                 self.send_to.send(self.builder.ready())
-                return
+                return request.state
 
     def __play(self: Self, state: State, action: Action) -> State:
         action.from_cell.x -= 1
         action.from_cell.y -= 1
         action.to_cell.x -= 1
         action.to_cell.y -= 1
-        list_state = [list(row) for row in state]
-        piece, team, ball = state[action.from_cell.y][action.from_cell.x]
-        to_piece, to_team, to_ball = state[action.to_cell.y][action.to_cell.x]
+        board_list = [list(row) for row in state.board.board]
+        piece, team, ball = state.board.board[action.from_cell.y][action.from_cell.x]
+        to_piece, to_team, to_ball = state.board.board[action.to_cell.y][
+            action.to_cell.x
+        ]
+
+        if (
+            piece == Piece.PAWN
+            and not ball
+            and abs(action.from_cell.x - action.to_cell.x) == 2
+        ):
+            state.board.en_passant = tuple([action.to_cell])
+        else:
+            state.board.en_passant = ()
 
         if ball:
-            list_state[action.from_cell.y][action.from_cell.x] = (
+            board_list[action.from_cell.y][action.from_cell.x] = (
                 piece, team, False)
-            list_state[action.to_cell.y][action.to_cell.x] = (
+            board_list[action.to_cell.y][action.to_cell.x] = (
                 to_piece, to_team, True)
         else:
-            list_state[action.from_cell.y][action.from_cell.x] = (
+            board_list[action.from_cell.y][action.from_cell.x] = (
                 Piece.EMPTY,
                 PlayerRole.NONE,
                 False,
             )
-            list_state[action.to_cell.y][action.to_cell.x] = (
-                piece, team, to_ball)
 
-        return tuple(tuple(cell for cell in row) for row in list_state)
+            if piece == Piece.PAWN and (action.to_cell.x, state.current_player) in (
+                (7, PlayerRole.WHITE),
+                (1, PlayerRole.BLACK),
+            ):
+                board_list[action.to_cell.y][action.to_cell.x] = (
+                    Piece.QUEEN,
+                    team,
+                    to_ball,
+                )
+            else:
+                board_list[action.to_cell.y][action.to_cell.x] = (
+                    piece, team, to_ball)
 
-    def __wait_for_play(self: Self) -> None:
+        state.board.board = tuple(tuple(cell for cell in row)
+                                  for row in board_list)
+        state.current_player = PlayerRole((state.current_player.value + 1) % 2)
+        state.current_turn += 1
+
+        return state
+
+    def __wait_for_play(self: Self, state: State) -> None:
         print("play")
-        turn = PlayerRole.WHITE.value
-        state: State = DEFAULT_STATE
         while True:
             request = self.read_from.recv()
             print(request)
@@ -257,20 +289,26 @@ class Client:
                 case PlayInfo(
                     game_id=game_id, player_clock=player_clock, actions=actions
                 ):
+                    turn = state.current_player.value
                     other_turn = (turn + 1) % 2
 
                     if actions is not None:
-                        if actions[other_turn] is None or actions[turn] is not None:
+                        if actions[turn] is None or actions[other_turn] is not None:
                             raise ValueError(turn, actions)
 
-                        previous_action = actions[other_turn]
+                        previous_action = actions[turn]
                         if previous_action is None:
                             raise ValueError
                         state = self.__play(state, previous_action)
 
-                    if turn == self.role.value:
+                    if state.current_player.value == self.role.value:
                         action, new_environment = self.player_callbacks.strategy_fn(
-                            game_id, self.environment, state, self.role, player_clock
+                            game_id,
+                            self.environment,
+                            state,
+                            actions,
+                            self.role,
+                            player_clock,
                         )
                         self.builder.set_maybe_action(action)
                         self.environment = new_environment
@@ -279,7 +317,6 @@ class Client:
 
                     self.send_to.send(self.builder.move())
 
-                    turn = other_turn
                     continue
 
                 case StopInfo(
@@ -290,17 +327,33 @@ class Client:
                 ):
                     self.send_to.send(self.builder.done())
                     self.player_callbacks.final_fn(
-                        game_id, self.environment, state, score, self.role, player_clock
+                        game_id,
+                        self.environment,
+                        state,
+                        actions,
+                        score,
+                        self.role,
+                        player_clock,
                     )
                     return
 
                 case AbortInfo(game_id):
+                    print("aborted")
                     return
 
     def __update(self: Self, status: Mutex[bool]) -> None:
-        self.__wait_for_info(status)
-        self.__wait_for_start(status)
-        self.__wait_for_play()
+        while True:
+            match self.new_match_behaviour:
+                case NewMatchBehaviour.PASS_NONE:
+                    self.environment = None
+                case NewMatchBehaviour.PASS_FIRST_ENVIRONMENT:
+                    self.environment = deepcopy(self.first_environment)
+                case NewMatchBehaviour.PASS_LAST_ENVIRONMENT:
+                    pass
+
+            self.__wait_for_info(status)
+            state = self.__wait_for_start(status)
+            self.__wait_for_play(state)
 
     def __server_addr(self: Self) -> str:
         return f"ws://{self.server_option.host}:{self.server_option.port}{self.server_option.service}"

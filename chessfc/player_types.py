@@ -1,23 +1,38 @@
+from enum import Enum
 from typing import Any, Callable, Optional, Mapping, Self
 
-from .game import Action, Duration, PlayerRole, Score, State
+from .game import Action, Duration, MaybeMaybeAction, PlayerRole, Score, State
 
 Environment = Optional[Mapping[str, Any]]
-StartFn = Callable[[str, PlayerRole, Duration,
-                    Duration, Duration, int], Environment]
-StrategyFn = Callable[
-    [str, Environment, State, PlayerRole, Duration], tuple[Action, Environment]
+StartFn = Callable[
+    [
+        str,
+        Environment,
+        PlayerRole,
+        Duration,
+        Duration,
+        Duration,
+        int,
+        State,
+        MaybeMaybeAction,
+    ],
+    Environment,
 ]
-FinalFn = Callable[[str, Environment, State,
-                    Score, PlayerRole, Duration], None]
+StrategyFn = Callable[
+    [str, Environment, State, MaybeMaybeAction, PlayerRole, Duration],
+    tuple[Action, Environment],
+]
+FinalFn = Callable[
+    [str, Environment, State, MaybeMaybeAction, Score, PlayerRole, Duration], None
+]
 
 
 class ClientOption:
     def __init__(
-            self: Self,
-            host: str = "127.0.0.1",
-            port: str = "0",
-            name: str = "python-client",
+        self: Self,
+        host: str = "127.0.0.1",
+        port: str = "0",
+        name: str = "python-client",
     ) -> None:
         """
         Create a ClientObject object
@@ -37,10 +52,10 @@ class ClientOption:
 
 class ServerOption:
     def __init__(
-            self: Self,
-            host: str = "127.0.0.1",
-            port: str = "8080",
-            service: str = "/ws",
+        self: Self,
+        host: str = "127.0.0.1",
+        port: str = "8080",
+        service: str = "/ws",
     ) -> None:
         """
         Create a ServerOption object
@@ -56,3 +71,9 @@ class ServerOption:
         self.host = host
         self.port = port
         self.service = service
+
+
+class NewMatchBehaviour(Enum):
+    PASS_NONE = 0
+    PASS_LAST_ENVIRONMENT = 1
+    PASS_FIRST_ENVIRONMENT = 2
