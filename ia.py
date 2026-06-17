@@ -1,6 +1,7 @@
 """IA : fonction d'évaluation et recherche alpha-bêta."""
 
 import random
+import time
 
 from constantes import *
 from plateau import get_piece, get_couleur, plateau_init
@@ -236,6 +237,20 @@ def joueur_alphabeta(prof: int = 2):
     table_transpo: dict = {}  # conservée d'un coup à l'autre pour ce joueur
     def strat(etat: list) -> tuple[Case, Case] | None:
         return meilleur_coup(etat, prof, table_transpo)
+    return strat
+
+
+def joueur_iteratif(prof_max: int = 4, temps_max: float | None = None):
+    table_transpo: dict = {}  # conservée d'un coup à l'autre
+    def strat(etat: list) -> tuple[Case, Case] | None:
+        debut = time.monotonic()
+        coup = None
+        for prof in range(1, prof_max + 1):
+            coup = meilleur_coup(etat, prof, table_transpo)
+            # on s'arrête à la moitié su temps
+            if temps_max is not None and time.monotonic() - debut >= temps_max / 2:
+                break
+        return coup
     return strat
 
 

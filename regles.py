@@ -57,15 +57,17 @@ def cases_visees(plateau: Plateau, case_src: Case) -> list[Case]:
 
     return cases
 
-def est_jouable(plateau: Plateau, case_src: Case, case_dst: Case, en_passant: Case | None = None) -> bool:
+def est_jouable(plateau: Plateau, case_src: Case, case_dst: Case, en_passant: Case | None = None, cases: list[Case] | None = None) -> bool:
     piece = get_piece(plateau, case_src)
 
     # verification de la pièce
     if piece not in PIECES:
         return False
     
-    # vérification de la case
-    if case_dst not in cases_visees(plateau, case_src):
+    # vérification de la case (cases déjà calculé par l'appelant si fourni)
+    if cases is None:
+        cases = cases_visees(plateau, case_src)
+    if case_dst not in cases:
         return False
 
     # vérification de la cible
@@ -94,11 +96,13 @@ def cases_passe(plateau: Plateau, balle: Case) -> list[Case]:
             cases.append((l + dl, c + sens))
     return cases
 
-def passe_jouable(plateau: Plateau, balle: Case, case_dst: Case) -> bool:
+def passe_jouable(plateau: Plateau, balle: Case, case_dst: Case, cases: list[Case] | None = None) -> bool:
     piece = get_piece(plateau, balle)  # la pièce qui possède le ballon
     if piece not in PIECES:
         return False
-    if case_dst not in cases_passe(plateau, balle):
+    if cases is None:
+        cases = cases_passe(plateau, balle)
+    if case_dst not in cases:
         return False
 
     # le pion passe devant lui (case occupée ou non), mais en diagonale
@@ -160,13 +164,15 @@ def coups_legaux(etat: list) -> list[tuple[Case, Case]]:
             
             # frappe du ballon
             if case_src == balle:
-                for case_dst in cases_passe(plateau, case_src):
-                    if passe_jouable(plateau, balle, case_dst):
+                cases = cases_passe(plateau, case_src)
+                for case_dst in cases:
+                    if passe_jouable(plateau, balle, case_dst, cases):
                         coups.append((case_src, case_dst))
             # déplacement
             else:
-                for case_dst in cases_visees(plateau, case_src):
-                    if est_jouable(plateau, case_src, case_dst, en_passant):
+                cases = cases_visees(plateau, case_src)
+                for case_dst in cases:
+                    if est_jouable(plateau, case_src, case_dst, en_passant, cases):
                         coups.append((case_src, case_dst))
 
     return coups
@@ -182,7 +188,7 @@ def final(etat: list, coups: list | None = None) -> int | None:
     if balle[1] in (7, 8):
         return 1
 
-    # pat : l'appelant peut fournir coups_legaux déjà calculé pour éviter un recalcul
+    # pat
     if coups is None:
         coups = coups_legaux(etat)
     if coups == []:

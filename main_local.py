@@ -4,7 +4,7 @@ from constantes import *
 from plateau import plateau_init, get_piece, get_couleur, recherche_nom, get_nom
 from regles import passe_jouable, est_jouable, jouer, final, get_etat
 from affichage import afficher
-from ia import joueur_alphabeta
+from ia import joueur_alphabeta, joueur_iteratif
 
 
 # coup d'un humain : saisie clavier "B3 D3" etc...
@@ -106,6 +106,7 @@ if __name__ == "__main__":
     elif choix == "3":
         play(joueur_alphabeta(4), coup_humain)
     elif choix == "4":
-        play(joueur_alphabeta(3), joueur_alphabeta(3))
+        play(joueur_alphabeta(4), joueur_iteratif(10, 3))
+        # play(joueur_alphabeta(4), joueur_alphabeta(4))
     else:
         play(coup_humain, coup_humain)

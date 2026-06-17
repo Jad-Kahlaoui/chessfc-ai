@@ -10,12 +10,8 @@ from constantes import *
 from plateau import colonnes_jouables, get_nom
 from affichage import afficher
 from regles import jouer, get_etat
-from ia import meilleur_coup, copier_plateau
+from ia import joueur_iteratif, joueur_alphabeta, copier_plateau
 from adaptateur import etat_vers_plateau, role_vers_couleur, coup_vers_action
-
-## profondeur de recherche de l'alpha-beta - TODO à modifier , 6 ou 7 semble une profondeur correct
-PROFONDEUR = 7
-
 
 def detecter_en_passant(precedent: Plateau | None, courant: Plateau, couleur_adverse: int) -> Case | None:
     """Retrouve la cible de prise en passant en comparant le plateau prévu
@@ -58,8 +54,8 @@ def start_fn(game_id: str, environment: Environment, role: PlayerRole,
     print(f"  temps total    : {total_clock} ns (0 = illimite)")
     print(f"  limite de tours: {limit_number_of_turn} (0 = aucune)")
     
-    ## table : table de transposition conservée d'un coup à l'autre
-    return {"precedent": None, "table": {}}
+    return {"precedent": None, "strat": joueur_iteratif(10, 5)}
+    # return {"precedent": None, "strat": joueur_alphabeta(3)}
 
 
 def strategy_fn(game_id: str, environment: Environment, state: State,
@@ -74,12 +70,7 @@ def strategy_fn(game_id: str, environment: Environment, state: State,
 
     etat = get_etat(plateau, balle, couleur, en_passant)
 
-    ## table réutilisée
-    table_transpo = environment.get("table")
-    if table_transpo is None:
-        table_transpo = {}
-
-    coup = meilleur_coup(etat, PROFONDEUR, table_transpo)
+    coup = environment["strat"](etat)
 
     if coup is None:
         ## aucun coup legal: serveur doit normalement conclure la partie
@@ -94,7 +85,6 @@ def strategy_fn(game_id: str, environment: Environment, state: State,
     jouer(prevision, balle, case_src, case_dst, en_passant)
     environment = dict(environment)
     environment["precedent"] = prevision
-    environment["table"] = table_transpo
 
     return coup_vers_action(case_src, case_dst), environment
 
