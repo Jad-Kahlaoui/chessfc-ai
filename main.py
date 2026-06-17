@@ -76,7 +76,7 @@ def start_fn(
     print(f"  temps total    : {total_clock} ns (0 = illimite)")
     print(f"  limite de tours: {limit_number_of_turn} (0 = aucune)")
 
-    return {"precedent": None, "strat": joueur_iteratif(10, 5)}
+    return {"precedent": None, "strat": joueur_iteratif(10, 5)} ##TODO ATTENTION TEMPS A ADAPTER SELON TOTAL CLOCK
     # return {"precedent": None, "strat": joueur_alphabeta(3)}
 
 

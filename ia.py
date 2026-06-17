@@ -261,6 +261,7 @@ def joueur_iteratif(prof_max: int = 4, temps_max: float | None = None):
             coup = meilleur_coup(etat, prof, table_transpo)
             # on s'arrête à la moitié su temps
             if temps_max is not None and time.monotonic() - debut >= temps_max / 2:
+                print(f"PROFONDEUR CHOISIT:{prof}")
                 break
         return coup
 
