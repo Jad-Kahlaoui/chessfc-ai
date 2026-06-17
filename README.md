@@ -1,5 +1,4 @@
-
-# Chess FC
+ # Chess FC
 
 **Chess FC** est un jeu de stratégie qui mélange échecs et foot. Une description du jeu et des règles est disponible sur le site de Smart Games : https://playroom.smartgames.com/fr/games/chessfc.
 
@@ -54,7 +53,7 @@ python main.py 127.0.0.1 8080 jad-test
  - 127.0.0.1 = adresse du serveur
  - 8080 = port 
 
-Le fichier `main.py` est le vrai point d'entrée pour le serveur. Il utilise les callbacks de la bibliothèque `chessfc` V3.
+Le fichier `main.py` est le vrai point d'entrée pour le serveur. Il implémente les fonctions de callbacks permettant au serveur de simuler une partie de jeu.
 
 ## Organisation du code
 
@@ -105,7 +104,7 @@ La forme particulière du plateau est gérée avec la fonction `colonnes_jouable
 
 `BALLE` peut être posé sur le plateau, mais la position de la balle est aussi suivie dans une variable `balle` à part.
 
-Ce choix est nécessaire car une pièce peut se tenir sur le ballon. Une seule case ne peut pas contenir proprement à la fois une pièce et la balle si on utilise uniquement une valeur entière dans le plateau.
+Ce choix est nécessaire car une pièce se tenir sur la même case que le ballon. Une seule case ne peut pas contenir proprement à la fois une pièce et la balle si on utilise uniquement une valeur entière dans le plateau.
 
 ### Coordonnées
 
@@ -259,6 +258,7 @@ Les principales limites sont :
 - la profondeur de recherche est limitée par le temps de calcul ;
 - IA contre IA identique mène souvent à des matchs nuls, car les décisions sont symétriques ou déterministes ;
 - certaines positions complexes de fin de partie peuvent encore être mieux évaluées.
+- Une seconde stratégie était prévu mais par manque de temps, non aboutie.
 
 ## Répartition du travail
 
