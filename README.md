@@ -1,6 +1,4 @@
  # Chess FC
-## KAHLAOUI JAD 
-## DESROCHE QUENTIN 
 **Chess FC** est un jeu de stratégie qui mélange échecs et foot. Une description du jeu et des règles est disponible sur le site de Smart Games : https://playroom.smartgames.com/fr/games/chessfc.
 
 Chaque joueur commence avec 6 pièces : 3 pions, une tour, un fou et un cavalier. Les règles de déplacement et de prises sont les mêmes qu'aux échecs. Une balle est placée au milieu du terrain. Si une pièce est sur la case de la balle, elle ne se déplace pas, mais à la place elle envoie la balle vers les cases accessibles normalement par cette pièce. La première équipe à marquer un but gagne le match.
